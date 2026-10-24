@@ -19,6 +19,9 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "search.h"
+#include "notify.h"
+#include "clipboard.h"
 #include "mgmt.h"
 #include "a11y.h"
 #include "ota.h"
@@ -372,6 +375,9 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    search_init();
+    notify_init();
+    clipboard_init();
     mgmt_init();
     a11y_init();
     ota_init();
