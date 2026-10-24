@@ -19,6 +19,14 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "simulation.h"
+#include "matrix.h"
+#include "reality.h"
+#include "dimension.h"
+#include "time.h"
+#include "multiverse.h"
+#include "singularity.h"
+#include "consciousness.h"
 #include "warp.h"
 #include "fusion.h"
 #include "dnastorage.h"
@@ -405,6 +413,14 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    simulation_init();
+    matrix_init();
+    reality_init();
+    dimension_init();
+    time_init();
+    multiverse_init();
+    singularity_init();
+    consciousness_init();
     warp_init();
     fusion_init();
     dnastorage_init();
