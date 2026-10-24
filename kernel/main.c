@@ -18,6 +18,11 @@
 #include "user.h"
 #include "pkg.h"
 #include "sec.h"
+#include "browser.h"
+#include "settings.h"
+#include "calculator.h"
+#include "filemgr.h"
+#include "terminal.h"
 #include "limine.h"
 
 extern uint64_t psci_version(void);
@@ -348,6 +353,11 @@ void kernel_main(void)
     user_init();
     pkg_init();
     sec_init();
+    browser_init();
+    settings_init();
+    calculator_init();
+    filemgr_init();
+    terminal_init();
 
     /* Masaustu arayuzu */
     gui_init();
