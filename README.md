@@ -37,6 +37,8 @@ make run
 ## Iskelet Durumu (tamamlandi)
 Tum alt sistemler iskelet seviyesinde mevcuttur: VFS, net (ARP/ICMP/TCP/UDP/HTTP), ses, proc scheduler, user/perm, pkg, sec/secure-boot, wm/compositor, gpu/keyboard/mouse/blk, initramfs/elfloader, ext4/fat, aslr, smp, power, ota, a11y, mgmt, uygulama katmani (terminal, filemgr, calculator, settings, browser).
 
+## Modul sayisi: 46
+
 ## Puan (tahmini)
 - Windows 11: 98/100
 - Quantro OS (iskelet): 20/100
