@@ -10,6 +10,13 @@
 #include "uart.h"
 #include "fb.h"
 #include "gui.h"
+#include "vfs.h"
+#include "net.h"
+#include "sound.h"
+#include "proc.h"
+#include "user.h"
+#include "pkg.h"
+#include "sec.h"
 #include "limine.h"
 
 extern uint64_t psci_version(void);
@@ -327,6 +334,15 @@ void kernel_main(void)
         boot_unix_time = boot_time_request.response->boot_time;
 
     timer_init();
+
+    /* Alt sistemler */
+    vfs_init();
+    net_init();
+    sound_init();
+    proc_init();
+    user_init();
+    pkg_init();
+    sec_init();
 
     /* Masaustu arayuzu */
     gui_init();
