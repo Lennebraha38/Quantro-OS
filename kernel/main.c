@@ -8,6 +8,7 @@
 #include "types.h"
 #include "kernel.h"
 #include "uart.h"
+#include "string.h"
 #include "fb.h"
 #include "gui.h"
 #include "vfs.h"
@@ -147,6 +148,10 @@ static void shell_help(void)
         "  fb        - Ekran bilgisi\r\n"
         "  uptime    - Calisma suresi\r\n"
         "  clear     - Ekrani temizle\r\n"
+        "  ls        - Dosyalari listele\r\n"
+        "  cat <f>  - Dosya oku\r\n"
+        "  touch <f> - Dosya olustur\r\n"
+        "  write <f> <data> - Dosyaya yaz\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
         "\r\n");
