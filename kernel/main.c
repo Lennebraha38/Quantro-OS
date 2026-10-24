@@ -19,6 +19,14 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "hypervisor.h"
+#include "virt.h"
+#include "container.h"
+#include "sandbox.h"
+#include "crashreport.h"
+#include "telemetry.h"
+#include "l10n.h"
+#include "theming.h"
 #include "search.h"
 #include "notify.h"
 #include "clipboard.h"
@@ -375,6 +383,14 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    hypervisor_init();
+    virt_init();
+    container_init();
+    sandbox_init();
+    crashreport_init();
+    telemetry_init();
+    l10n_init();
+    theming_init();
     search_init();
     notify_init();
     clipboard_init();
