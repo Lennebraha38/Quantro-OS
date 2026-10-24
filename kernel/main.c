@@ -19,6 +19,14 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "nirvana.h"
+#include "transcendence.h"
+#include "omniscience.h"
+#include "omnipotence.h"
+#include "eternity.h"
+#include "infinity.h"
+#include "godmode.h"
+#include "omniverse.h"
 #include "simulation.h"
 #include "matrix.h"
 #include "reality.h"
@@ -413,6 +421,14 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    nirvana_init();
+    transcendence_init();
+    omniscience_init();
+    omnipotence_init();
+    eternity_init();
+    infinity_init();
+    godmode_init();
+    omniverse_init();
     simulation_init();
     matrix_init();
     reality_init();
