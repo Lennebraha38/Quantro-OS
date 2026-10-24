@@ -18,6 +18,7 @@
 #include "user.h"
 #include "pkg.h"
 #include "sec.h"
+#include "wm.h"
 #include "browser.h"
 #include "settings.h"
 #include "calculator.h"
@@ -353,6 +354,8 @@ void kernel_main(void)
     user_init();
     pkg_init();
     sec_init();
+    wm_init();
+    wm_create_window("Quantro Desktop");
     browser_init();
     settings_init();
     calculator_init();
