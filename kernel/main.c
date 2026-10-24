@@ -19,6 +19,14 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "warp.h"
+#include "fusion.h"
+#include "dnastorage.h"
+#include "neuromorphic.h"
+#include "digitaltwin.h"
+#include "predictive.h"
+#include "autopatch.h"
+#include "selfhealing.h"
 #include "satellite.h"
 #include "net5g.h"
 #include "edge.h"
@@ -397,6 +405,14 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    warp_init();
+    fusion_init();
+    dnastorage_init();
+    neuromorphic_init();
+    digitaltwin_init();
+    predictive_init();
+    autopatch_init();
+    selfhealing_init();
     satellite_init();
     net5g_init();
     edge_init();
