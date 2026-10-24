@@ -19,6 +19,17 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "mgmt.h"
+#include "a11y.h"
+#include "ota.h"
+#include "power.h"
+#include "smp.h"
+#include "aslr.h"
+#include "fat.h"
+#include "ext4.h"
+#include "http.h"
+#include "udp.h"
+#include "tcp.h"
 #include "elfloader.h"
 #include "initramfs.h"
 #include "blk.h"
@@ -361,6 +372,17 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    mgmt_init();
+    a11y_init();
+    ota_init();
+    power_init();
+    smp_init();
+    aslr_init();
+    fat_init();
+    ext4_init();
+    http_init();
+    udp_init();
+    tcp_init();
     elfloader_init();
     initramfs_init();
     blk_init();
