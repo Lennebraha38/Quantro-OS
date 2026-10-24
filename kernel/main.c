@@ -19,6 +19,14 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "satellite.h"
+#include "net5g.h"
+#include "edge.h"
+#include "iot.h"
+#include "metaverse.h"
+#include "web3.h"
+#include "blockchain.h"
+#include "quantum.h"
 #include "ar.h"
 #include "gesture.h"
 #include "voice.h"
@@ -389,6 +397,14 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    satellite_init();
+    net5g_init();
+    edge_init();
+    iot_init();
+    metaverse_init();
+    web3_init();
+    blockchain_init();
+    quantum_init();
     ar_init();
     gesture_init();
     voice_init();
