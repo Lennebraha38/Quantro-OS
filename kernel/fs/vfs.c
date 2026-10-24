@@ -54,6 +54,12 @@ int vfs_append(const char *name,const char *data){
     }
     return -1;
 }
+int vfs_copy(const char *src,const char *dst){
+    const char *d=vfs_read(src);
+    if(!d) return -1;
+    if(vfs_create(dst)!=0) return -1;
+    return vfs_write(dst,d);
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){
