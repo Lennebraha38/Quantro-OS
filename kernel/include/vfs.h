@@ -14,4 +14,5 @@ int vfs_delete(const char *name);
 int vfs_rename(const char *oldn,const char *newn);
 int vfs_append(const char *name,const char *data);
 int vfs_copy(const char *src,const char *dst);
+int vfs_exists(const char *name);
 #endif

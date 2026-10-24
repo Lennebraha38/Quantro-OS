@@ -60,6 +60,10 @@ int vfs_copy(const char *src,const char *dst){
     if(vfs_create(dst)!=0) return -1;
     return vfs_write(dst,d);
 }
+int vfs_exists(const char *name){
+    for(int i=0;i<VFS_MAX_FILES;i++) if(files[i].used && strcmp(files[i].name,name)==0) return 1;
+    return 0;
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){

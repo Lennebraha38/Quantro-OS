@@ -229,6 +229,8 @@ static void shell_help(void)
         "  append <f> <data> - Dosyaya ekle\r\n"
         "  cp <a> <b> - Kopyala\r\n"
         "  pwd       - Calisma dizini (root)\r\n"
+        "  exists <f> - Dosya var mi?\r\n"
+        "  echo <txt> - Metin yaz\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
         "\r\n");
