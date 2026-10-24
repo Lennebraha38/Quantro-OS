@@ -19,6 +19,12 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "ar.h"
+#include "gesture.h"
+#include "voice.h"
+#include "biometric.h"
+#include "cloudsync.h"
+#include "aiassistant.h"
 #include "hypervisor.h"
 #include "virt.h"
 #include "container.h"
@@ -383,6 +389,12 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    ar_init();
+    gesture_init();
+    voice_init();
+    biometric_init();
+    cloudsync_init();
+    aiassistant_init();
     hypervisor_init();
     virt_init();
     container_init();
