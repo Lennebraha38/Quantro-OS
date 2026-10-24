@@ -13,6 +13,9 @@
 #include "gui.h"
 #include "vfs.h"
 #include "net.h"
+#include "arp.h"
+#include "icmp.h"
+#include "virtio_net.h"
 #include "sound.h"
 #include "proc.h"
 #include "user.h"
@@ -422,7 +425,10 @@ void kernel_main(void)
 
     /* Alt sistemler */
     vfs_init();
+    virtio_net_init();
     net_init();
+    arp_init();
+    icmp_init();
     sound_init();
     proc_init();
     user_init();
