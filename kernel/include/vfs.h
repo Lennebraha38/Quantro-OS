@@ -12,4 +12,5 @@ const char *vfs_read(const char *name);
 void vfs_list(void);
 int vfs_delete(const char *name);
 int vfs_rename(const char *oldn,const char *newn);
+int vfs_append(const char *name,const char *data);
 #endif

@@ -44,6 +44,16 @@ int vfs_rename(const char *oldn,const char *newn){
     }
     return -1;
 }
+int vfs_append(const char *name,const char *data){
+    for(int i=0;i<VFS_MAX_FILES;i++){
+        if(files[i].used && strcmp(files[i].name,name)==0){
+            int j=files[i].size;
+            while(data[j-files[i].size] && j<VFS_DATA_LEN-1){ files[i].data[j]=data[j-files[i].size]; j++; }
+            files[i].data[j]='\0'; files[i].size=j; return 0;
+        }
+    }
+    return -1;
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){
