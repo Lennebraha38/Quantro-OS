@@ -64,6 +64,10 @@ int vfs_exists(const char *name){
     for(int i=0;i<VFS_MAX_FILES;i++) if(files[i].used && strcmp(files[i].name,name)==0) return 1;
     return 0;
 }
+uint32_t vfs_size(const char *name){
+    for(int i=0;i<VFS_MAX_FILES;i++) if(files[i].used && strcmp(files[i].name,name)==0) return files[i].size;
+    return 0;
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){

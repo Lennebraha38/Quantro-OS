@@ -230,6 +230,7 @@ static void shell_help(void)
         "  cp <a> <b> - Kopyala\r\n"
         "  pwd       - Calisma dizini (root)\r\n"
         "  exists <f> - Dosya var mi?\r\n"
+        "  stat <f>   - Dosya boyutu\r\n"
         "  echo <txt> - Metin yaz\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
