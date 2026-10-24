@@ -19,6 +19,12 @@
 #include "pkg.h"
 #include "sec.h"
 #include "wm.h"
+#include "elfloader.h"
+#include "initramfs.h"
+#include "blk.h"
+#include "mouse.h"
+#include "keyboard.h"
+#include "gpu.h"
 #include "browser.h"
 #include "settings.h"
 #include "calculator.h"
@@ -355,6 +361,12 @@ void kernel_main(void)
     pkg_init();
     sec_init();
     wm_init();
+    elfloader_init();
+    initramfs_init();
+    blk_init();
+    mouse_init();
+    keyboard_init();
+    gpu_init();
     wm_create_window("Quantro Desktop");
     browser_init();
     settings_init();
