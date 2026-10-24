@@ -228,6 +228,7 @@ static void shell_help(void)
         "  mv <a> <b> - Yeniden adlandir\r\n"
         "  append <f> <data> - Dosyaya ekle\r\n"
         "  cp <a> <b> - Kopyala\r\n"
+        "  pwd       - Calisma dizini (root)\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
         "\r\n");
@@ -514,6 +515,8 @@ void kernel_main(void)
             last_sec = sec;
             gui_tick((uint64_t)boot_unix_time, sec);
         }
+
+        proc_tick();
 
         if (uart_rx_ready())
             shell_loop();
