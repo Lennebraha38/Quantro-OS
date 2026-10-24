@@ -30,6 +30,12 @@ const char *vfs_read(const char *name){
     }
     return 0;
 }
+int vfs_delete(const char *name){
+    for(int i=0;i<VFS_MAX_FILES;i++){
+        if(files[i].used && strcmp(files[i].name,name)==0){ files[i].used=0; files[i].size=0; files[i].data[0]='\0'; files[i].name[0]='\0'; return 0; }
+    }
+    return -1;
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){

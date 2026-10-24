@@ -224,6 +224,7 @@ static void shell_help(void)
         "  cat <f>  - Dosya oku\r\n"
         "  touch <f> - Dosya olustur\r\n"
         "  write <f> <data> - Dosyaya yaz\r\n"
+        "  rm <f>    - Dosya sil\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
         "\r\n");
