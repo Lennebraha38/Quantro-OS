@@ -225,6 +225,7 @@ static void shell_help(void)
         "  touch <f> - Dosya olustur\r\n"
         "  write <f> <data> - Dosyaya yaz\r\n"
         "  rm <f>    - Dosya sil\r\n"
+        "  mv <a> <b> - Yeniden adlandir\r\n"
         "  halt      - Cekirdegi durdur\r\n"
         "  reboot    - Sistemi yeniden baslat (PSCI)\r\n"
         "\r\n");

@@ -36,6 +36,14 @@ int vfs_delete(const char *name){
     }
     return -1;
 }
+int vfs_rename(const char *oldn,const char *newn){
+    for(int i=0;i<VFS_MAX_FILES;i++){
+        if(files[i].used && strcmp(files[i].name,oldn)==0){
+            int j=0; while(newn[j] && j<VFS_NAME_LEN-1){ files[i].name[j]=newn[j]; j++; } files[i].name[j]='\0'; return 0;
+        }
+    }
+    return -1;
+}
 void vfs_list(void){
     uart_puts("Dosyalar:\r\n");
     for(int i=0;i<VFS_MAX_FILES;i++){
