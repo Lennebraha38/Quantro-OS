@@ -7,7 +7,7 @@
 #include "types.h"
 
 #define KERNEL_NAME    "Benim-OS Pro"
-#define KERNEL_VERSION "0.2.0"
+#define KERNEL_VERSION "0.3.0"
 #define KERNEL_ARCH    "AArch64"
 
 /* QEMU virt makinesindeki PL011 UART'in fiziksel adresi */
