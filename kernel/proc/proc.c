@@ -5,6 +5,10 @@ typedef struct { int id; int state; char name[16]; } task_t;
 static task_t tasks[MAX_TASKS];
 static int task_count=0;
 static int current=0;
+void proc_tick(void){
+    if(task_count==0) return;
+    current=(current+1)%task_count;
+}
 void proc_init(void){
     for(int i=0;i<MAX_TASKS;i++) tasks[i].state=0;
     uart_puts("[proc] round-robin scheduler ready (max 8 tasks)\r\n");
