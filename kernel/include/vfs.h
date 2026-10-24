@@ -16,4 +16,6 @@ int vfs_append(const char *name,const char *data);
 int vfs_copy(const char *src,const char *dst);
 int vfs_exists(const char *name);
 uint32_t vfs_size(const char *name);
+#define VFS_MOUNT_POINT "/mnt"
+int vfs_mount(const char *point, const char *fstype);
 #endif

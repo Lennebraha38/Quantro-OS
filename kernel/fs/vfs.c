@@ -1,6 +1,6 @@
 #include "vfs.h"
 #include "uart.h"
-#include "string.h"
+#include "kernel.h"
 static vfs_file_t files[VFS_MAX_FILES];
 void vfs_init(void){
     for(int i=0;i<VFS_MAX_FILES;i++) files[i].used=0;
@@ -73,4 +73,14 @@ void vfs_list(void){
     for(int i=0;i<VFS_MAX_FILES;i++){
         if(files[i].used) uart_printf("  %s (%u bytes)\r\n", files[i].name, files[i].size);
     }
+}
+
+#include "fat.h"
+int vfs_mount(const char *point, const char *fstype){
+    (void)point;
+    if(strcmp(fstype,"fat")==0 || strcmp(fstype,"fat32")==0){
+        return fat_mount();
+    }
+    uart_puts("[vfs] unknown fstype\r\n");
+    return -1;
 }

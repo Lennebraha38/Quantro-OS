@@ -484,14 +484,16 @@ void kernel_main(void)
     power_init();
     smp_init();
     aslr_init();
+    blk_init();
     fat_init();
+    fat_mount();
+    vfs_mount("/mnt","fat32");
     ext4_init();
     http_init();
     udp_init();
     tcp_init();
     elfloader_init();
     initramfs_init();
-    blk_init();
     mouse_init();
     keyboard_init();
     gpu_init();
