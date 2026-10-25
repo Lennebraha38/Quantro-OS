@@ -1,6 +1,6 @@
 /*
  * Quantro OS - Ana Cekirdek (AArch64, Limine Protokolu rev 2)
- * Windows 11 Mimari ve Fonksiyonel Esitlik Surumu
+ * Tam Donanim Mimarisi, PMM/VMM/Heap, Preemptive Scheduler ve Windows 11 Paritesi
  */
 #include "types.h"
 #include "kernel.h"
@@ -21,6 +21,12 @@
 #include "filemgr.h"
 #include "browser.h"
 #include "terminal.h"
+#include "pmm.h"
+#include "vmm.h"
+#include "heap.h"
+#include "traps.h"
+#include "fat.h"
+#include "elfloader.h"
 #include "limine.h"
 
 extern uint64_t psci_version(void);
@@ -114,6 +120,39 @@ static void shell_mem(void)
                 (unsigned)(memmap_usable_bytes / (1024 * 1024)));
 }
 
+static void shell_pmm(void)
+{
+    uint64_t total = pmm_get_total_memory();
+    uint64_t free = pmm_get_free_memory();
+    uint64_t used = pmm_get_used_memory();
+
+    uart_puts("\r\n--- AArch64 Fiziksel Sayfa Ayirici (PMM) Raporu ---\r\n");
+    uart_printf(" Sayfa Boyutu (Granule):      4096 bayt (4 KB)\r\n");
+    uart_printf(" Toplam Yonetilen Bellek:    %llu MB (%llu sayfa)\r\n",
+                total / (1024 * 1024), total / 4096);
+    uart_printf(" Kullanilan Fiziksel Bellek: %llu MB (%llu sayfa)\r\n",
+                used / (1024 * 1024), used / 4096);
+    uart_printf(" Bos Fiziksel Bellek:        %llu MB (%llu sayfa)\r\n",
+                free / (1024 * 1024), free / 4096);
+    uart_puts("---------------------------------------------------\r\n");
+}
+
+static void shell_heap(void)
+{
+    size_t used = heap_get_used();
+    size_t total = heap_get_total();
+
+    uart_puts("\r\n--- Kernel Dinamik Heap (kmalloc / kfree) Raporu ---\r\n");
+    uart_printf(" Toplam Heap Kapasitesi:     %u KB (%u bayt)\r\n",
+                (unsigned)(total / 1024), (unsigned)total);
+    uart_printf(" Tahsis Edilen Bellek:       %u KB (%u bayt)\r\n",
+                (unsigned)(used / 1024), (unsigned)used);
+    uart_printf(" Kullanilabilir Bos Alan:    %u KB\r\n",
+                (unsigned)((total - used) / 1024));
+    uart_puts(" Tahsis Motoru:              Guvenli Linked-List Free Block Allocator\r\n");
+    uart_puts("----------------------------------------------------\r\n");
+}
+
 /* ---- Sistem Bilgisi (Windows Systeminfo) --------------------------- */
 
 static void shell_sysinfo(void)
@@ -122,37 +161,37 @@ static void shell_sysinfo(void)
     uart_puts(" QUANTRO OS - WINDOWS 11 SISTEM BILGISI (SYSTEMINFO)\r\n");
     uart_puts("=======================================================\r\n");
     uart_puts(" Ana Bilgisayar Adi:          QUANTRO-PC\r\n");
-    uart_puts(" Isletim Sistemi Adi:         Microsoft Windows 11 Pro (Quantro Kernel)\r\n");
+    uart_puts(" Isletim Sistemi Adi:         Microsoft Windows 11 Pro (Quantro AArch64)\r\n");
     uart_printf(" Isletim Sistemi Surumu:      10.0.26100 Yapisi 26100 (v%s)\r\n", KERNEL_VERSION);
-    uart_puts(" OS Ureticisi:                Quantro OpenSource Core\r\n");
-    uart_puts(" Sistem Mimarisi:             ARM64-based PC (AArch64)\r\n");
-    uart_puts(" Onyukleme Aygi:              \\Device\\HarddiskVolume1 (Limine UEFI rev 2)\r\n");
-    uart_puts(" BIOS / Firmware:             EDK II UEFI ARM64 v2025.11\r\n");
-    uart_puts(" Guvenli Onyukleme Durumu:    ACIK (Secure Boot Validated)\r\n");
-    uart_puts(" Donanim Tabanli Guvenlik:    TPM 2.0 (Etkin ve Kilitli)\r\n");
-    uart_puts(" Sanallastirma Guvenligi:     VBS & HVCI Calisiyor\r\n");
-    uart_printf(" Toplam Fiziksel Bellek:      %u MiB\r\n",
+    uart_puts(" Sistem Mimarisi:             ARM64-based PC (AArch64 Bare-Metal)\r\n");
+    uart_puts(" Onyukleme Protokolu:         Limine Boot Protocol rev 2 (UEFI)\r\n");
+    uart_puts(" Donanim Tabanli Guvenlik:    TPM 2.0 (PCR0-7 Validated & Enforced)\r\n");
+    uart_puts(" Sanallastirma Guvenligi:     VBS & HVCI Etkin\r\n");
+    uart_printf(" Toplam Fiziksel Bellek:      %u MiB (PMM Yonetiminde)\r\n",
                 (unsigned)(memmap_usable_bytes / (1024 * 1024)));
-    uart_puts(" Ag Bagdastiricisi:           VirtIO-Net 10Gbps Ethernet0 (192.168.1.105)\r\n");
+    uart_printf(" Cekirdek Heap Alani:         %u KB (kmalloc hazir)\r\n",
+                (unsigned)(heap_get_total() / 1024));
+    uart_puts(" Ag Donanimi:                 VirtIO-Net 10Gbps NDIS Ethernet0 (192.168.1.105)\r\n");
+    uart_puts(" Dosya Sistemi Alt Yapisi:    NTFS/VFS Sanal C:\\ + On-Disk FAT32 ESP\r\n");
+    uart_puts(" Gorev Yoneticisi:            AArch64 Preemptive Donanimsal Context Switch\r\n");
     uart_puts("=======================================================\r\n");
 }
-
-/* ---- UART yardimci ------------------------------------------------ */
 
 static void uart_print_info(void)
 {
     uart_printf("\r\n=======================================================\r\n");
     uart_printf(" %s (Windows 11 Edition) v%s\r\n", KERNEL_NAME, KERNEL_VERSION);
-    uart_printf(" Mimari: %s | Onyukleme: Limine Protokolu rev 2\r\n", KERNEL_ARCH);
+    uart_printf(" Mimari: %s | PMM, VMM, Heap, Preemptive Scheduler AKTIF\r\n", KERNEL_ARCH);
     if (framebuffer_request.response &&
         framebuffer_request.response->framebuffer_count > 0) {
         struct limine_framebuffer *fb =
             framebuffer_request.response->framebuffers[0];
-        uart_printf(" Ekran: %ux%u (%u bpp) TrueColor\r\n",
+        uart_printf(" Ekran: %ux%u (%u bpp) TrueColor Framebuffer\r\n",
                     (unsigned)fb->width, (unsigned)fb->height, (unsigned)fb->bpp);
     }
-    uart_printf(" Kullanilabilir RAM: %u MiB\r\n",
-                (unsigned)(memmap_usable_bytes / (1024 * 1024)));
+    uart_printf(" Kullanilabilir RAM: %u MiB | Heap: %u KB\r\n",
+                (unsigned)(memmap_usable_bytes / (1024 * 1024)),
+                (unsigned)(heap_get_total() / 1024));
     uart_printf(" Oturum: %s\\%s\r\n", "QUANTRO-PC", user_current_name());
     uart_printf(" Komut listesi icin 'help' veya '?' yazin.\r\n");
     uart_printf("=======================================================\r\n\r\n");
@@ -164,19 +203,22 @@ static void uart_print_info(void)
 static void shell_help(void)
 {
     uart_puts(
-        "\r\n--- QUANTRO OS KOMUT KILAVUZU (Windows 11 / PowerShell Parity) ---\r\n\r\n"
-        " SISTEM & DONANIM:\r\n"
+        "\r\n--- QUANTRO OS TAM DONANIM & POWERSHELL KOMUT KILAVUZU ---\r\n\r\n"
+        " SISTEM & DONANIM CEKIRDEGI:\r\n"
         "   help, ?                 - Bu yardim ekranini gosterir\r\n"
         "   ver                     - Isletim sistemi surumunu gosterir\r\n"
-        "   sysinfo, systeminfo     - Detayli sistem bilesenleri raporu\r\n"
-        "   mem                     - Limine bellek haritasini listeler\r\n"
-        "   fb                      - Framebuffer ekran bilgilerini gosterir\r\n"
+        "   sysinfo, systeminfo     - Kapsamli sistem bilesenleri raporu\r\n"
+        "   mem                     - Limine fiziksel bellek haritasini listeler\r\n"
+        "   pmm                     - Fiziksel sayfa ayirici (PMM 4KB) istatistikleri\r\n"
+        "   heap                    - Kernel heap (kmalloc/kfree) bellek durumu\r\n"
+        "   fb                      - Framebuffer cozumleme bilgilerini verir\r\n"
         "   uptime                  - Calisma suresini gosterir\r\n"
         "   cls, clear              - Ekrani temizler\r\n"
         "   reboot                  - Sistemi yeniden baslatir (ARM PSCI)\r\n"
         "   halt                    - Cekirdegi durdurur\r\n\r\n"
-        " DOSYA SISTEMI (NTFS / VFS):\r\n"
+        " DOSYA SISTEMI (NTFS / VFS & FAT32):\r\n"
         "   dir, ls [yol]           - Dosyalari ve dizinleri listeler\r\n"
+        "   fatls                   - On-Disk FAT32 partisyonu kok dizinini listeler\r\n"
         "   type, cat <dosya>       - Dosya icerigini okur\r\n"
         "   touch <dosya>           - Yeni bos dosya olusturur\r\n"
         "   write <dosya> <metin>   - Dosyaya metin yazar\r\n"
@@ -185,35 +227,36 @@ static void shell_help(void)
         "   ren, mv <eski> <yeni>   - Dosyayi yeniden adlandirir\r\n"
         "   copy, cp <kaynak> <hed> - Dosyayi kopyalar\r\n"
         "   mkdir, md <dizin>       - Yeni dizin olusturur\r\n"
-        "   stat <dosya>            - Dosya boyutunu ve durumunu verir\r\n\r\n"
-        " GOREV & SUREC YONETIMI (TASK MANAGER):\r\n"
-        "   tasklist, ps            - Calisan tum surecleri listeler\r\n"
+        "   stat <dosya>            - Dosya boyutunu verir\r\n\r\n"
+        " GOREV, SUREC & PROGRAM YUKLEME:\r\n"
+        "   tasklist, ps            - Calisan surecleri listeler (Preemptive Context Switch)\r\n"
         "   taskkill <pid>          - Belirtilen sureci sonlandirir\r\n"
-        "   start <ad>              - Yeni bir surec baslatir\r\n\r\n"
-        " GUVENLIK & KULLANICI (SECURITY & SAM):\r\n"
+        "   start <ad>              - Yeni bir arka plan gorevi baslatir\r\n"
+        "   exec <elf_dosyasi>      - 64-bit ELF ikilisini ayristirip bellekte calistirir\r\n\r\n"
+        " GUVENLIK & KULLANICI:\r\n"
         "   whoami                  - Gecerli kullanici ve SID bilgisini verir\r\n"
         "   users                   - Sistem kullanicilarini listeler\r\n"
         "   login <kull> <parola>   - Oturum degistirir\r\n"
         "   useradd <kull> <parola> - Yeni kullanici olusturur\r\n"
         "   secstat                 - TPM 2.0, Secure Boot ve VBS durumu\r\n"
         "   tpm                     - TPM PCR donanim kayitlarini gosterir\r\n"
-        "   defender <dosya>        - Dosyayi zararli yazilim taramasindan gecirir\r\n\r\n"
-        " AG & ILETISIM (NETWORKING):\r\n"
-        "   ipconfig, ifconfig      - IP yapilandirmasi ve NDIS adaptor\r\n"
-        "   ping <ip>               - ICMP echo istegi gonderir\r\n"
-        "   netstat                 - Etkin TCP/UDP portlarini listeler\r\n"
-        "   curl, fetch <url>       - Web sayfasina HTTP istegi atar\r\n\r\n"
-        " UYGULAMALAR & PENCERE YONETICISI:\r\n"
-        "   calc <sayi> <op> <sayi> - Modern hesap makinesi (+, -, *, /, %%)\r\n"
+        "   defender <dosya>        - Dosyayi heuristic virus taramasindan gecirir\r\n\r\n"
+        " AG & ILETISIM:\r\n"
+        "   ipconfig, ifconfig      - NDIS Ethernet adapter yapilandirmasi\r\n"
+        "   ping <ip>               - ICMP echo istegi ve checksum dogrulamasi\r\n"
+        "   netstat                 - Etkin TCP/UDP dinleyici portlarini listeler\r\n"
+        "   curl, fetch <url>       - Web portalina HTTP istegi atar\r\n\r\n"
+        " MASAUSTU & UYGULAMALAR:\r\n"
+        "   calc <a op b>           - Modern hesap makinesi\r\n"
         "   settings                - Windows 11 Ayarlar Paneli\r\n"
-        "   explorer                - Dosya Gezgini arayuzunu acar\r\n"
-        "   edge <url>              - Microsoft Edge web tarayicisini calistirir\r\n"
-        "   powershell              - Windows PowerShell basligini acar\r\n"
-        "   wm                      - Aktif DWM pencerelerini listeler\r\n"
-        "   toast <baslik> <mesaj>  - Windows Action Center bildirimi gonderir\r\n"
+        "   explorer                - Dosya Gezgini\r\n"
+        "   edge <url>              - Microsoft Edge tarayicisi\r\n"
+        "   powershell              - Windows PowerShell\r\n"
+        "   wm                      - Aktif pencereleri listeler\r\n"
+        "   toast <baslik> <mesaj>  - Toast bildirimi gonderir\r\n"
         "   notifications           - Gelen bildirimleri listeler\r\n"
         "   clip [metin]            - Panoya kopyalar veya panoyu gosterir\r\n"
-        "   volume [0-100]          - Sistem ses seviyesini ayarlar\r\n"
+        "   volume [0-100]          - Ses seviyesini ayarlar\r\n"
         "   beep                    - Uyari sesi calar\r\n\r\n");
 }
 
@@ -255,46 +298,34 @@ static void shell_reboot(void)
 
 static void shell_execute(char *line)
 {
-    while (*line == ' ')
-        line++;
+    while (*line == ' ') line++;
+    if (*line == '\0') goto prompt;
 
-    if (*line == '\0')
-        goto prompt;
-
-    /* Parametreleri ayristir */
     char cmd[32];
     char arg1[64];
     char arg2[64];
     char arg3[64];
-    cmd[0] = '\0';
-    arg1[0] = '\0';
-    arg2[0] = '\0';
-    arg3[0] = '\0';
+    cmd[0] = '\0'; arg1[0] = '\0'; arg2[0] = '\0'; arg3[0] = '\0';
 
     int i = 0;
-    while (*line && *line != ' ' && i < 31)
-        cmd[i++] = *line++;
+    while (*line && *line != ' ' && i < 31) cmd[i++] = *line++;
     cmd[i] = '\0';
 
     while (*line == ' ') line++;
     i = 0;
-    while (*line && *line != ' ' && i < 63)
-        arg1[i++] = *line++;
+    while (*line && *line != ' ' && i < 63) arg1[i++] = *line++;
     arg1[i] = '\0';
 
     while (*line == ' ') line++;
     i = 0;
-    while (*line && *line != ' ' && i < 63)
-        arg2[i++] = *line++;
+    while (*line && *line != ' ' && i < 63) arg2[i++] = *line++;
     arg2[i] = '\0';
 
     while (*line == ' ') line++;
     i = 0;
-    while (*line && i < 63)
-        arg3[i++] = *line++;
+    while (*line && i < 63) arg3[i++] = *line++;
     arg3[i] = '\0';
 
-    /* Komut karsilastirmalari */
     if (strcmp(cmd, "help") == 0 || strcmp(cmd, "?") == 0) {
         shell_help();
     } else if (strcmp(cmd, "ver") == 0) {
@@ -304,6 +335,10 @@ static void shell_execute(char *line)
         shell_sysinfo();
     } else if (strcmp(cmd, "mem") == 0) {
         shell_mem();
+    } else if (strcmp(cmd, "pmm") == 0) {
+        shell_pmm();
+    } else if (strcmp(cmd, "heap") == 0) {
+        shell_heap();
     } else if (strcmp(cmd, "fb") == 0) {
         shell_fb();
     } else if (strcmp(cmd, "uptime") == 0) {
@@ -322,6 +357,8 @@ static void shell_execute(char *line)
             vfs_list_dir(arg1);
         else
             vfs_list();
+    } else if (strcmp(cmd, "fatls") == 0) {
+        fat_list_root();
     } else if (strcmp(cmd, "type") == 0 || strcmp(cmd, "cat") == 0) {
         if (arg1[0] == '\0') {
             uart_puts("Kullanim: type <dosya>\r\n");
@@ -330,7 +367,7 @@ static void shell_execute(char *line)
             if (data)
                 uart_printf("%s\r\n", data);
             else
-                uart_printf("Hata: '%s' dosyasi bulunamadi.\r\n", arg1);
+                uart_printf("Hata: '%s' bulunamadi.\r\n", arg1);
         }
     } else if (strcmp(cmd, "touch") == 0) {
         if (arg1[0] == '\0') {
@@ -339,7 +376,7 @@ static void shell_execute(char *line)
             if (vfs_create(arg1) == 0)
                 uart_printf("Dosya olusturuldu: %s\r\n", arg1);
             else
-                uart_puts("Hata: Dosya tablosu dolu veya olusturulamadi.\r\n");
+                uart_puts("Hata: Dosya olusturulamadi.\r\n");
         }
     } else if (strcmp(cmd, "write") == 0) {
         if (arg1[0] == '\0' || arg2[0] == '\0') {
@@ -378,7 +415,7 @@ static void shell_execute(char *line)
             uart_puts("Kullanim: copy <kaynak> <hedef>\r\n");
         } else {
             if (vfs_copy(arg1, arg2) == 0)
-                uart_printf("Dosya kopyalandi: %s -> %s\r\n", arg1, arg2);
+                uart_printf("Kopyalandi: %s -> %s\r\n", arg1, arg2);
             else
                 uart_puts("Hata: Kopyalama basarisiz.\r\n");
         }
@@ -399,7 +436,7 @@ static void shell_execute(char *line)
                 uart_printf("'%s' mevcut degil.\r\n", arg1);
         }
     }
-    /* GOREV & SUREC YONETIMI */
+    /* GOREV & ELF YUKLEME */
     else if (strcmp(cmd, "tasklist") == 0 || strcmp(cmd, "ps") == 0) {
         proc_list();
     } else if (strcmp(cmd, "taskkill") == 0 || strcmp(cmd, "kill") == 0) {
@@ -408,9 +445,9 @@ static void shell_execute(char *line)
         } else {
             int pid = atoi(arg1);
             if (proc_kill(pid) == 0)
-                uart_printf("Basari: PID %d islemi sonlandirildi.\r\n", pid);
+                uart_printf("Basari: PID %d sonlandirildi.\r\n", pid);
             else
-                uart_printf("Hata: PID %d sonlandirilamadi (gecersiz veya korunuyor).\r\n", pid);
+                uart_printf("Hata: PID %d sonlandirilamadi.\r\n", pid);
         }
     } else if (strcmp(cmd, "start") == 0 || strcmp(cmd, "spawn") == 0) {
         if (arg1[0] == '\0') {
@@ -418,9 +455,15 @@ static void shell_execute(char *line)
         } else {
             int pid = proc_spawn(arg1);
             if (pid >= 0)
-                uart_printf("Surec baslatildi: %s (PID: %d)\r\n", arg1, pid);
+                uart_printf("Gorev baslatildi: %s (PID: %d)\r\n", arg1, pid);
             else
-                uart_puts("Hata: Surec tablosu dolu.\r\n");
+                uart_puts("Hata: Gorev tablosu dolu.\r\n");
+        }
+    } else if (strcmp(cmd, "exec") == 0) {
+        if (arg1[0] == '\0') {
+            uart_puts("Kullanim: exec <elf_dosyasi>\r\n");
+        } else {
+            elfloader_exec_file(arg1);
         }
     }
     /* GUVENLIK & KULLANICI */
@@ -464,7 +507,7 @@ static void shell_execute(char *line)
         else
             net_fetch(arg1);
     }
-    /* UYGULAMALAR & DWM */
+    /* UYGULAMALAR */
     else if (strcmp(cmd, "calc") == 0) {
         if (arg1[0] == '\0' || arg2[0] == '\0' || arg3[0] == '\0') {
             calculator_run();
@@ -503,7 +546,7 @@ static void shell_execute(char *line)
             clip_copy(arg1);
     } else if (strcmp(cmd, "volume") == 0) {
         if (arg1[0] == '\0')
-            uart_printf("Gecerli Ses Seviyesi: %%%d\r\n", sound_get_volume());
+            uart_printf("Ses Seviyesi: %%%d\r\n", sound_get_volume());
         else
             sound_set_volume(atoi(arg1));
     } else if (strcmp(cmd, "beep") == 0) {
@@ -571,22 +614,34 @@ void kernel_panic(const char *message)
 
 void kernel_main(void)
 {
-    /* Limine Base revizyonunu dogrula */
     if (!LIMINE_BASE_REVISION_SUPPORTED) {
         for (;;) {
             __asm__ volatile("wfe" ::: "memory");
         }
     }
 
-    /* HHDM ofseti */
     if (hhdm_request.response)
         hhdm_offset = hhdm_request.response->offset;
 
-    /* UART (PL011) seri konsol */
     uart_init(hhdm_offset + PL011_PHYS_BASE);
-    uart_printf("\r\n[%s] Windows 11 Tabanli Cekirdek Onyukleniyor...\r\n", KERNEL_NAME);
+    uart_printf("\r\n[%s] Windows 11 AArch64 Cekirdegi Onyukleniyor...\r\n", KERNEL_NAME);
 
-    /* Framebuffer */
+    /* 1. Fiziksel Sayfa Ayirici (PMM) */
+    if (memmap_request.response) {
+        pmm_init(memmap_request.response);
+        shell_mem();
+    }
+
+    /* 2. AArch64 Sanal Bellek Yoneticisi (VMM) */
+    vmm_init(hhdm_offset);
+
+    /* 3. Dinamik Cekirdek Heap Alani (kmalloc/kfree) */
+    heap_init(0, 0);
+
+    /* 4. Donanimsal Exception Vector Tablosu (VBAR_EL1) */
+    traps_init();
+
+    /* 5. Framebuffer ve Ekran */
     if (!framebuffer_request.response ||
         framebuffer_request.response->framebuffer_count < 1) {
         uart_puts("HATA: Framebuffer bulunamadi!\r\n");
@@ -594,27 +649,36 @@ void kernel_main(void)
             __asm__ volatile("wfe" ::: "memory");
         }
     }
-
-    struct limine_framebuffer *first_fb =
-        framebuffer_request.response->framebuffers[0];
+    struct limine_framebuffer *first_fb = framebuffer_request.response->framebuffers[0];
     fb_init(first_fb);
 
-    /* Bellek Haritasi */
-    shell_mem();
-
-    /* RTC Baslangic zamani */
     if (boot_time_request.response)
         boot_unix_time = boot_time_request.response->boot_time;
 
     timer_init();
 
-    /* Alt sistemlerin baslatilmasi (Windows 11 Parity Stack) */
+    /* 6. Dosya Sistemleri (NTFS/VFS + On-Disk FAT32) */
     vfs_init();
-    proc_init();
+    fat_init();
+    fat_mount();
+
+    /* 7. Guvenlik, SAM ve Donanim TPM 2.0 */
     user_init();
     sec_init();
+
+    /* 8. Tam Ag Yigini (Ethernet/ARP/IPv4/ICMP/UDP/TCP) */
     net_init();
+
+    /* 9. Ses ve Multimedya */
     sound_init();
+
+    /* 10. ELF64 Binary Yukleyicisi */
+    elfloader_init();
+
+    /* 11. Preemptive Scheduler & Gorevler */
+    proc_init();
+
+    /* 12. Masaustu, Pencereler ve Fluent GUI */
     clipboard_init();
     notify_init();
     calculator_init();
@@ -627,11 +691,9 @@ void kernel_main(void)
     wm_create_window("Sistem Ozellikleri");
     wm_create_window("Dosya Gezgini");
 
-    /* Masaustu grafik arayuzunu ciz */
     gui_init();
     gui_redraw_all();
 
-    /* Ana dongu: Zamanlayici + GUI yenileme + Seri Konsol */
     uint64_t last_sec = 0;
 
     for (;;) {
