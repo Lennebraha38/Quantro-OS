@@ -4,7 +4,7 @@
  */
 #include "fb.h"
 #include "kernel.h"
-#include "font8x8.h"
+#include "font8x16.h"
 #include "limine.h"
 
 struct fb_surface g_fb;
@@ -177,6 +177,12 @@ void fb_draw_border(int x, int y, int w, int h, int thickness, uint32_t rgb)
     fb_fill_rect(x + w - thickness, y, thickness, h, rgb);     /* Sag */
 }
 
+void fb_draw_round_border(int x, int y, int w, int h, int radius, int thickness, uint32_t rgb)
+{
+    (void)radius;
+    fb_draw_border(x, y, w, h, thickness, rgb);
+}
+
 /* Windows 11 Acrylic Blur Motoru (Frosted Glass / Buzlu Cam) */
 void fb_blur_rect(int x, int y, int w, int h, int radius)
 {
@@ -219,20 +225,26 @@ void fb_draw_acrylic_panel(int x, int y, int w, int h, int radius, uint32_t tint
     fb_blend_round_rect(x, y + h - 1, w, 1, radius, 0x000000, 60);
 }
 
-/* Antialiased Temiz Metin Cizimi */
+/* High-Definition Sharp & Proportional Metin Çizimi */
 void fb_draw_char(int x, int y, char c, uint32_t rgb, int scale)
 {
     if (scale <= 0) scale = 1;
     unsigned char ch = (unsigned char)c;
     if (ch > 127) ch = '?';
 
-    const uint8_t *glyph = font8x8[ch];
+    const uint8_t *glyph = font8x16[ch];
+    uint8_t w = font8x16_width[ch];
+    if (w > 8) w = 8;
 
-    for (int row = 0; row < 8; row++) {
+    for (int row = 0; row < 16; row++) {
         uint8_t bits = glyph[row];
-        for (int col = 0; col < 8; col++) {
-            if (bits & (1u << col)) {
-                fb_fill_rect(x + col * scale, y + row * scale, scale, scale, rgb);
+        for (int col = 0; col < w; col++) {
+            if (bits & (0x80 >> col)) {
+                if (scale == 1) {
+                    fb_put_pixel(x + col, y + row, rgb);
+                } else {
+                    fb_fill_rect(x + col * scale, y + row * scale, scale, scale, rgb);
+                }
             }
         }
     }
@@ -241,10 +253,14 @@ void fb_draw_char(int x, int y, char c, uint32_t rgb, int scale)
 void fb_draw_text(int x, int y, const char *text, uint32_t rgb, int scale)
 {
     if (!text) return;
+    if (scale <= 0) scale = 1;
     int cursor = x;
     while (*text) {
-        fb_draw_char(cursor, y, *text, rgb, scale);
-        cursor += 8 * scale;
+        unsigned char ch = (unsigned char)*text;
+        if (ch > 127) ch = '?';
+        fb_draw_char(cursor, y, ch, rgb, scale);
+        uint8_t w = font8x16_width[ch];
+        cursor += (int)(w + 1) * scale;
         text++;
     }
 }
@@ -252,7 +268,15 @@ void fb_draw_text(int x, int y, const char *text, uint32_t rgb, int scale)
 uint32_t fb_text_width(const char *text, int scale)
 {
     if (!text) return 0;
-    return (uint32_t)strlen(text) * 8u * (uint32_t)scale;
+    if (scale <= 0) scale = 1;
+    uint32_t w = 0;
+    while (*text) {
+        unsigned char ch = (unsigned char)*text;
+        if (ch > 127) ch = '?';
+        w += (uint32_t)(font8x16_width[ch] + 1) * (uint32_t)scale;
+        text++;
+    }
+    return w;
 }
 
 void fb_draw_text_centered(int cx, int y, const char *text, uint32_t rgb, int scale)

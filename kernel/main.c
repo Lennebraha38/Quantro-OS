@@ -510,6 +510,7 @@ static void shell_execute(char *line)
     }
     /* UYGULAMALAR */
     else if (strcmp(cmd, "calc") == 0) {
+        gui_open_app(APP_CALC);
         if (arg1[0] == '\0' || arg2[0] == '\0' || arg3[0] == '\0') {
             calculator_run();
         } else {
@@ -521,15 +522,19 @@ static void shell_execute(char *line)
                 uart_printf("%d %c %d = %d\r\n", n1, op, n2, res);
         }
     } else if (strcmp(cmd, "settings") == 0) {
+        gui_open_app(APP_SETTINGS);
         settings_run();
     } else if (strcmp(cmd, "explorer") == 0 || strcmp(cmd, "filemgr") == 0) {
+        gui_open_app(APP_EXPLORER);
         filemgr_run();
     } else if (strcmp(cmd, "edge") == 0 || strcmp(cmd, "browser") == 0) {
+        gui_open_app(APP_EDGE);
         if (arg1[0] != '\0')
             browser_navigate(arg1);
         else
             browser_run();
     } else if (strcmp(cmd, "powershell") == 0 || strcmp(cmd, "cmd") == 0) {
+        gui_open_app(APP_TERMINAL);
         terminal_run();
     } else if (strcmp(cmd, "mouse") == 0) {
         if (arg1[0] != '\0' && arg2[0] != '\0') {
@@ -724,6 +729,7 @@ void kernel_main(void)
 
     if (has_fb) {
         gui_init();
+        gui_show_visionary_boot();
         gui_redraw_all();
     }
 
