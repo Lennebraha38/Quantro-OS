@@ -49,7 +49,10 @@ typedef struct {
 } win_state_t;
 
 static int g_active_app = APP_SETTINGS;
-static win_state_t g_windows[6];
+static win_state_t g_windows[8];
+static int g_quick_settings_open = 0;
+static int g_notifications_open = 0;
+static int g_snap_popup_open = 0;
 
 /* Uygulama Özel Durumları */
 /* 1. Ayarlar */
@@ -153,6 +156,15 @@ static void draw_fluent_calc(int cx, int cy, int size)
     fb_fill_round_rect(cx - r, cy - r, size, size, 6, 0x242424);
     fb_fill_round_rect(cx - r + 3, cy - r + 3, size - 6, size / 3, 2, 0x333333);
     fb_draw_text(cx - 7, cy - 3, "+-", 0x60CDFF, 1);
+}
+
+static void draw_fluent_taskmgr(int cx, int cy, int size)
+{
+    int r = size / 2;
+    fb_fill_round_rect(cx - r, cy - r, size, size, 6, 0x1E1E1E);
+    fb_fill_round_rect(cx - r + 4, cy + 2, 4, 8, 1, 0x10B981);
+    fb_fill_round_rect(cx - r + 10, cy - 4, 4, 14, 1, 0x0078D4);
+    fb_fill_round_rect(cx - r + 16, cy - 8, 4, 18, 1, 0xF59E0B);
 }
 
 /* ---- Vizyoner & Zamansız Açılış Ekranı (Visionary Startup) -------- */
@@ -460,7 +472,7 @@ static void draw_win11_start_menu(int cx, int by)
         { "Word", APP_SETTINGS }, { "Excel", APP_SETTINGS }, { "PowerPoint", APP_SETTINGS },
         { "Mail", APP_SETTINGS }, { "Takvim", APP_SETTINGS }, { "Fotograflar", APP_SETTINGS },
         { "Not Defteri", APP_TERMINAL }, { "Paint", APP_SETTINGS }, { "Muzik", APP_SETTINGS },
-        { "Defender", APP_SETTINGS }, { "Hava Durumu", APP_SETTINGS }, { "Saat", APP_SETTINGS }
+        { "Gorev Yon.", APP_TASKMGR }, { "Hava Durumu", APP_SETTINGS }, { "Saat", APP_SETTINGS }
     };
 
     int grid_x = mx + 36;
@@ -481,6 +493,7 @@ static void draw_win11_start_menu(int cx, int by)
         case 3: draw_fluent_calc(ax, ay, 28); break;
         case 4: draw_fluent_settings(ax, ay, 28); break;
         case 5: draw_fluent_store(ax, ay, 28); break;
+        case 15: draw_fluent_taskmgr(ax, ay, 28); break;
         default:
             fb_fill_round_rect(ax - 14, ay - 14, 28, 28, 6, 0x0078D4);
             fb_draw_text(ax - 4, ay - 7, "Q", 0xFFFFFF, 1);
@@ -524,6 +537,7 @@ static void draw_window_frame(int wx, int wy, int ww, int wh, const char *title,
     case APP_CALC:     draw_fluent_calc(wx + 22, wy + 21, 20); break;
     case APP_TERMINAL: draw_fluent_terminal(wx + 22, wy + 21, 20); break;
     case APP_EDGE:     draw_fluent_edge(wx + 22, wy + 21, 20); break;
+    case APP_TASKMGR:  draw_fluent_taskmgr(wx + 22, wy + 21, 20); break;
     }
 
     fb_draw_text(wx + 44, wy + 13, title, CLR_TEXT_WHITE, 1);
@@ -841,6 +855,206 @@ static void render_app_edge(win_state_t *ws)
     fb_draw_text(ex + 40, cy + 52, "ARM islemcilerde native olarak calistirarak benzersiz bir deneyim sunar.", CLR_TEXT_GRAY, 1);
 }
 
+/* ---- Uygulama 6: Görev Yöneticisi (Task Manager) ------------------ */
+
+static void render_app_taskmgr(win_state_t *ws)
+{
+    draw_window_frame(ws->x, ws->y, ws->w, ws->h, "Gorev Yoneticisi (Task Manager)", APP_TASKMGR);
+
+    int cy = ws->y + 46;
+    int cx = ws->x + 16;
+    int cw = ws->w - 32;
+
+    /* Sekmeler: Islemler, Performans, Baslangic */
+    fb_fill_round_rect(cx, cy, 90, 26, 4, 0x333333);
+    fb_fill_round_rect(cx, cy + 24, 90, 2, 1, CLR_ACCENT_BLUE);
+    fb_draw_text(cx + 14, cy + 6, "Islemler", CLR_TEXT_WHITE, 1);
+
+    fb_draw_text(cx + 104, cy + 6, "Performans", CLR_TEXT_GRAY, 1);
+    fb_draw_text(cx + 200, cy + 6, "Baslangic", CLR_TEXT_GRAY, 1);
+
+    cy += 34;
+
+    /* Kolon Basliklari */
+    fb_fill_round_rect(cx, cy, cw, 24, 4, 0x222222);
+    fb_draw_text(cx + 10, cy + 5, "Ad (Islem)", CLR_TEXT_MUTED, 1);
+    fb_draw_text(cx + 260, cy + 5, "Durum", CLR_TEXT_MUTED, 1);
+    fb_draw_text(cx + 360, cy + 5, "CPU %", CLR_TEXT_MUTED, 1);
+    fb_draw_text(cx + 450, cy + 5, "Bellek", CLR_TEXT_MUTED, 1);
+    fb_draw_text(cx + 540, cy + 5, "Disk", CLR_TEXT_MUTED, 1);
+    fb_draw_text(cx + 630, cy + 5, "GPU %", CLR_TEXT_MUTED, 1);
+
+    cy += 28;
+
+    static const struct {
+        const char *name;
+        const char *status;
+        const char *cpu;
+        const char *mem;
+        const char *disk;
+        const char *gpu;
+        uint32_t heat_color;
+    } proc_list[6] = {
+        { "System Kernel (SMP/Limine)", "Calisiyor", "0.8%", "18.4 MB", "0.1 MB/s", "0.0%", 0x282828 },
+        { "Mesa 3D Vulkan Compositor",  "Calisiyor", "4.2%", "142.0 MB", "0.4 MB/s", "12.5%", 0x2E2A1E },
+        { "Quantro Shell & Taskbar",   "Calisiyor", "1.6%", "98.5 MB",  "0.0 MB/s", "3.1%", 0x282828 },
+        { "Wine Proton 64-bit Core",    "Calisiyor", "8.5%", "256.0 MB", "1.8 MB/s", "18.2%", 0x3A281E },
+        { "PipeWire Audio Server",      "Calisiyor", "0.4%", "32.1 MB",  "0.0 MB/s", "0.0%", 0x282828 },
+        { "Storage Sense & Btrfs Auto", "Bosta",     "0.0%", "24.8 MB",  "0.0 MB/s", "0.0%", 0x282828 }
+    };
+
+    for (int p = 0; p < 6; p++) {
+        fb_fill_round_rect(cx, cy, cw, 28, 4, proc_list[p].heat_color);
+        fb_blend_round_rect(cx, cy, cw, 1, 1, 0xFFFFFF, 10);
+        fb_draw_text(cx + 10, cy + 7, proc_list[p].name, CLR_TEXT_WHITE, 1);
+        fb_draw_text(cx + 260, cy + 7, proc_list[p].status, 0x10B981, 1);
+        fb_draw_text(cx + 360, cy + 7, proc_list[p].cpu, CLR_TEXT_WHITE, 1);
+        fb_draw_text(cx + 450, cy + 7, proc_list[p].mem, CLR_TEXT_WHITE, 1);
+        fb_draw_text(cx + 540, cy + 7, proc_list[p].disk, CLR_TEXT_GRAY, 1);
+        fb_draw_text(cx + 630, cy + 7, proc_list[p].gpu, 0x60CDFF, 1);
+        cy += 32;
+    }
+
+    /* Alt Durum Çubuğu */
+    int foot_y = ws->y + ws->h - 38;
+    fb_fill_rect(ws->x, foot_y, ws->w, 38, 0x202020);
+    fb_blend_round_rect(ws->x, foot_y, ws->w, 1, 1, 0xFFFFFF, 15);
+    fb_draw_text(cx + 10, foot_y + 11, "Islem Sayisi: 48 | Toplam CPU: %15.5 | Toplam RAM: 636 MB / 4096 MB", CLR_TEXT_MUTED, 1);
+
+    int btn_x = ws->x + ws->w - 140;
+    fb_fill_round_rect(btn_x, foot_y + 6, 124, 26, 4, CLR_ACCENT_BLUE);
+    fb_draw_text(btn_x + 14, foot_y + 10, "Gorevi Sonlandir", CLR_TEXT_WHITE, 1);
+}
+
+/* ---- Hızlı Ayarlar Paneli (Win + A) ------------------------------- */
+
+static void draw_win11_quick_settings(void)
+{
+    int pw = 360;
+    int ph = 340;
+    int px = (int)g_w - pw - 16;
+    int py = (int)g_h - 50 - ph - 8;
+
+    fb_blend_round_rect(px - 8, py - 6, pw + 16, ph + 16, 14, 0x000000, 160);
+    fb_draw_acrylic_panel(px, py, pw, ph, 12, CLR_MICA_BG, 245);
+
+    /* 6 Hızlı Düğme */
+    static const struct {
+        const char *icon;
+        const char *name;
+        int active;
+    } q_btns[6] = {
+        { "Wi-Fi", "Wi-Fi Bagli", 1 },
+        { "BT", "Bluetooth", 1 },
+        { "Mod", "Ucak Modu", 0 },
+        { "Pil", "Pil Tasarrufu", 0 },
+        { "Isik", "Gece Isigi", 1 },
+        { "Eris", "Erisim", 0 }
+    };
+
+    int bx = px + 18;
+    int by = py + 20;
+    int bw = (pw - 48) / 2;
+    int bh = 44;
+
+    for (int i = 0; i < 6; i++) {
+        int r = i / 2;
+        int c = i % 2;
+        int item_x = bx + c * (bw + 12);
+        int item_y = by + r * (bh + 10);
+        uint32_t bg_col = q_btns[i].active ? CLR_ACCENT_BLUE : 0x2A2A2A;
+
+        fb_fill_round_rect(item_x, item_y, bw, bh, 6, bg_col);
+        fb_draw_text(item_x + 10, item_y + 14, q_btns[i].icon, CLR_TEXT_WHITE, 1);
+        fb_draw_text(item_x + 48, item_y + 14, q_btns[i].name, CLR_TEXT_WHITE, 1);
+    }
+
+    /* Parlaklık */
+    int sy = py + 185;
+    fb_draw_text(px + 20, sy, "Parlaklik", CLR_TEXT_MUTED, 1);
+    fb_fill_round_rect(px + 20, sy + 18, pw - 40, 6, 3, 0x333333);
+    fb_fill_round_rect(px + 20, sy + 18, (pw - 40) * 85 / 100, 6, 3, CLR_ACCENT_BLUE);
+    fb_fill_round_rect(px + 20 + (pw - 40) * 85 / 100 - 8, sy + 13, 16, 16, 8, 0xFFFFFF);
+
+    /* Ses */
+    sy += 48;
+    fb_draw_text(px + 20, sy, "Ses Seviyesi (PipeWire)", CLR_TEXT_MUTED, 1);
+    fb_fill_round_rect(px + 20, sy + 18, pw - 40, 6, 3, 0x333333);
+    fb_fill_round_rect(px + 20, sy + 18, (pw - 40) * 75 / 100, 6, 3, CLR_ACCENT_BLUE);
+    fb_fill_round_rect(px + 20 + (pw - 40) * 75 / 100 - 8, sy + 13, 16, 16, 8, 0xFFFFFF);
+
+    /* Alt Kısım */
+    int foot_y = py + ph - 42;
+    fb_fill_round_rect(px, foot_y, pw, 42, 12, 0x1A1A1A);
+    fb_draw_text(px + 18, foot_y + 14, "Pil: %100 Dolu | 8 Saat Kaldi", CLR_TEXT_WHITE, 1);
+    fb_draw_text(px + pw - 85, foot_y + 14, "Ayarlar", CLR_ACCENT_CYAN, 1);
+}
+
+/* ---- Bildirim Merkezi ve Takvim (Win + N) ------------------------- */
+
+static void draw_win11_notification_center(void)
+{
+    int nw = 360;
+    int nh = 460;
+    int nx = (int)g_w - nw - 16;
+    int ny = (int)g_h - 50 - nh - 8;
+
+    fb_blend_round_rect(nx - 8, ny - 6, nw + 16, nh + 16, 14, 0x000000, 160);
+    fb_draw_acrylic_panel(nx, ny, nw, nh, 12, CLR_MICA_BG, 245);
+
+    /* Bildirim Başlığı */
+    fb_draw_text(nx + 20, ny + 18, "Bildirimler", CLR_TEXT_WHITE, 2);
+    fb_draw_text(nx + nw - 95, ny + 22, "Tumunu Sil", CLR_ACCENT_BLUE, 1);
+
+    /* Bildirim Kartı 1 */
+    int cy = ny + 54;
+    fb_fill_round_rect(nx + 16, cy, nw - 32, 64, 8, CLR_MICA_CARD);
+    fb_blend_round_rect(nx + 16, cy, nw - 32, 1, 1, 0xFFFFFF, 20);
+    fb_draw_text(nx + 28, cy + 10, "Quantro Guvenlik", CLR_ACCENT_CYAN, 1);
+    fb_draw_text(nx + 28, cy + 28, "TPM 2.0 & LUKS2 Butunlugu Dogrulandi", CLR_TEXT_WHITE, 1);
+    fb_draw_text(nx + 28, cy + 44, "Sistem guvenli ve izole modda calisiyor.", CLR_TEXT_MUTED, 1);
+
+    /* Bildirim Kartı 2 */
+    cy += 74;
+    fb_fill_round_rect(nx + 16, cy, nw - 32, 64, 8, CLR_MICA_CARD);
+    fb_blend_round_rect(nx + 16, cy, nw - 32, 1, 1, 0xFFFFFF, 20);
+    fb_draw_text(nx + 28, cy + 10, "Windows Update", CLR_ACCENT_BLUE, 1);
+    fb_draw_text(nx + 28, cy + 28, "Quantro OS 24H2 Yamalari Guncel", CLR_TEXT_WHITE, 1);
+    fb_draw_text(nx + 28, cy + 44, "Btrfs anlik kurtarma noktasi hazir.", CLR_TEXT_MUTED, 1);
+
+    /* Takvim Kartı (Ekim 2026) */
+    cy += 78;
+    fb_fill_round_rect(nx + 16, cy, nw - 32, 170, 8, 0x1A1A1A);
+    fb_draw_text(nx + 28, cy + 12, "Ekim 2026", CLR_TEXT_WHITE, 1);
+    fb_draw_text(nx + nw - 110, cy + 12, "Pazar, 25", CLR_ACCENT_CYAN, 1);
+
+    /* Gün İsimleri */
+    static const char *days[7] = { "Pt", "Sa", "Ca", "Pe", "Cu", "Ct", "Pz" };
+    for (int d = 0; d < 7; d++) {
+        fb_draw_text(nx + 32 + d * 42, cy + 36, days[d], CLR_TEXT_MUTED, 1);
+    }
+
+    /* Gün Numaraları */
+    int cal_day = 1;
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 7; col++) {
+            if (cal_day <= 31) {
+                int dx = nx + 32 + col * 42;
+                int dy = cy + 58 + row * 24;
+                char d_str[4];
+                ksnprintf(d_str, sizeof(d_str), "%2d", cal_day);
+                if (cal_day == 25) {
+                    fb_fill_round_rect(dx - 4, dy - 3, 24, 20, 10, CLR_ACCENT_BLUE);
+                    fb_draw_text(dx, dy, d_str, 0xFFFFFF, 1);
+                } else {
+                    fb_draw_text(dx, dy, d_str, CLR_TEXT_GRAY, 1);
+                }
+                cal_day++;
+            }
+        }
+    }
+}
+
 /* ---- Fare İmleci Çizici ------------------------------------------- */
 
 static void draw_win11_aero_cursor(int mx, int my)
@@ -926,7 +1140,7 @@ void gui_init(void)
     g_active_app = APP_SETTINGS;
 
     /* Pencerelerin Başlangıç Boyutları */
-    for (int i = 1; i <= 5; i++) {
+    for (int i = 1; i <= 6; i++) {
         g_windows[i].open = (i == APP_SETTINGS) ? 1 : 0;
         g_windows[i].minimized = 0;
         g_windows[i].maximized = 0;
@@ -945,6 +1159,12 @@ void gui_init(void)
     g_windows[APP_CALC].h = 420;
     g_windows[APP_CALC].x = (int)g_w / 2 - 170;
     g_windows[APP_CALC].y = 100;
+
+    /* Görev Yöneticisi */
+    g_windows[APP_TASKMGR].w = 780;
+    g_windows[APP_TASKMGR].h = 460;
+    g_windows[APP_TASKMGR].x = ((int)g_w / 2) - (g_windows[APP_TASKMGR].w / 2);
+    g_windows[APP_TASKMGR].y = 80;
 }
 
 void gui_redraw_all(void)
@@ -968,6 +1188,7 @@ void gui_redraw_all(void)
         case APP_CALC:     render_app_calc(ws); break;
         case APP_TERMINAL: render_app_terminal(ws); break;
         case APP_EDGE:     render_app_edge(ws); break;
+        case APP_TASKMGR:  render_app_taskmgr(ws); break;
         }
     }
 
@@ -978,6 +1199,16 @@ void gui_redraw_all(void)
 
     /* 5. Görev Çubuğu */
     draw_win11_taskbar();
+
+    /* 6. Hızlı Ayarlar (Win+A) */
+    if (g_quick_settings_open) {
+        draw_win11_quick_settings();
+    }
+
+    /* 7. Bildirim Merkezi & Takvim (Win+N) */
+    if (g_notifications_open) {
+        draw_win11_notification_center();
+    }
 
     /* 6. Dinamik Fare İmleci */
     save_cursor_bg(g_cursor_x, g_cursor_y);
@@ -1041,6 +1272,26 @@ void gui_toggle_settings_window(void)
     gui_toggle_app(APP_SETTINGS);
 }
 
+void gui_toggle_quick_settings(void)
+{
+    g_quick_settings_open = !g_quick_settings_open;
+    if (g_quick_settings_open) {
+        g_notifications_open = 0;
+        g_start_open = 0;
+    }
+    gui_redraw_all();
+}
+
+void gui_toggle_notifications(void)
+{
+    g_notifications_open = !g_notifications_open;
+    if (g_notifications_open) {
+        g_quick_settings_open = 0;
+        g_start_open = 0;
+    }
+    gui_redraw_all();
+}
+
 /* ---- Etkileşimli Tıklama İşleyicisi (Interactivity Router) -------- */
 
 void gui_handle_mouse(int x, int y, int btn)
@@ -1084,6 +1335,16 @@ void gui_handle_mouse(int x, int y, int btn)
                     }
                 }
             }
+
+            /* Sağ Sistem Tepsisi Tıklamaları */
+            if (x >= (int)g_w - 220 && x < (int)g_w - 110) {
+                gui_toggle_quick_settings();
+                return;
+            }
+            if (x >= (int)g_w - 110) {
+                gui_toggle_notifications();
+                return;
+            }
             return;
         }
 
@@ -1110,7 +1371,7 @@ void gui_handle_mouse(int x, int y, int btn)
                         static const int target_app[18] = {
                             APP_EDGE, APP_EXPLORER, APP_TERMINAL, APP_CALC, APP_SETTINGS, APP_SETTINGS,
                             APP_SETTINGS, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS,
-                            APP_TERMINAL, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS, APP_SETTINGS
+                            APP_TERMINAL, APP_SETTINGS, APP_SETTINGS, APP_TASKMGR, APP_SETTINGS, APP_SETTINGS
                         };
                         gui_open_app(target_app[i]);
                         return;

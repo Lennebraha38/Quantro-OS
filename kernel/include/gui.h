@@ -12,7 +12,8 @@ enum {
     APP_EXPLORER = 2,
     APP_CALC = 3,
     APP_TERMINAL = 4,
-    APP_EDGE = 5
+    APP_EDGE = 5,
+    APP_TASKMGR = 6
 };
 
 void gui_init(void);
@@ -27,6 +28,8 @@ void gui_toggle_app(int app_id);
 void gui_close_active_app(void);
 void gui_toggle_start_menu(void);
 void gui_toggle_settings_window(void);
+void gui_toggle_quick_settings(void);
+void gui_toggle_notifications(void);
 
 /* Etkileşimli Fare ve İmleç Olayları */
 void gui_handle_mouse(int x, int y, int btn);

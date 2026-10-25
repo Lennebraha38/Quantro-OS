@@ -46,7 +46,7 @@ KERNEL_SRCS := $(shell find $(KERNEL_DIR) -name '*.c' -o -name '*.S')
 KERNEL_OBJS := $(patsubst $(KERNEL_DIR)/%.c,$(BUILD_DIR)/%.o,\
                $(patsubst $(KERNEL_DIR)/%.S,$(BUILD_DIR)/%.o,$(KERNEL_SRCS)))
 
-.PHONY: all clean run esp bootloader
+.PHONY: all clean run esp bootloader run-x11 x\:11 x11 server x11-server
 
 all: $(KERNEL_ELF)
 
@@ -75,8 +75,23 @@ run: esp
 		-qmp unix:qmp.sock,server,nowait \
 		-no-reboot &
 
+# Termux:X11 Sunucusu ve Baglanti Kontrolu
+server x11-server:
+	@mkdir -p /tmp/.X11-unix
+	@ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /tmp/.X11-unix/X0 2>/dev/null || true
+	@if ! pgrep -f "termux-x11" >/dev/null 2>&1; then \
+		echo "Termux:X11 sunucusu baslatiliyor..."; \
+		(termux-x11 :0 -ac >/dev/null 2>&1 &); \
+		sleep 1; \
+	fi
+	@echo "[✓] Termux:X11 Sunucusu aktif (DISPLAY=:0)"
+
+# make x:11 ve make x11 kisayollari
+x\:11: run-x11
+x11: run-x11
+
 # Termux:X11 uzerinden arayuzu tam ekran ac (Tam Ekran + Dokunmatik tablet + Gorunur imlec)
-run-x11: esp
+run-x11: esp server
 	@mkdir -p /tmp/.X11-unix && ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /tmp/.X11-unix/X0 2>/dev/null || true
 	DISPLAY=:0 $(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
