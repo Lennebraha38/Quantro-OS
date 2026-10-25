@@ -642,15 +642,17 @@ void kernel_main(void)
     traps_init();
 
     /* 5. Framebuffer ve Ekran */
-    if (!framebuffer_request.response ||
-        framebuffer_request.response->framebuffer_count < 1) {
-        uart_puts("HATA: Framebuffer bulunamadi!\r\n");
-        for (;;) {
-            __asm__ volatile("wfe" ::: "memory");
-        }
+    int has_fb = 0;
+    if (framebuffer_request.response &&
+        framebuffer_request.response->framebuffer_count > 0) {
+        struct limine_framebuffer *first_fb = framebuffer_request.response->framebuffers[0];
+        fb_init(first_fb);
+        has_fb = 1;
+        uart_printf("[fb] Framebuffer bulundu: %ux%u (%u bpp)\r\n",
+                    (unsigned)first_fb->width, (unsigned)first_fb->height, (unsigned)first_fb->bpp);
+    } else {
+        uart_puts("[fb] UYARI: Grafik Framebuffer bulunamadi, UART konsol modunda devam ediliyor.\r\n");
     }
-    struct limine_framebuffer *first_fb = framebuffer_request.response->framebuffers[0];
-    fb_init(first_fb);
 
     if (boot_time_request.response)
         boot_unix_time = boot_time_request.response->boot_time;
@@ -691,8 +693,10 @@ void kernel_main(void)
     wm_create_window("Sistem Ozellikleri");
     wm_create_window("Dosya Gezgini");
 
-    gui_init();
-    gui_redraw_all();
+    if (has_fb) {
+        gui_init();
+        gui_redraw_all();
+    }
 
     uint64_t last_sec = 0;
 
@@ -701,7 +705,7 @@ void kernel_main(void)
         uint64_t ticks = timer_ticks();
         uint64_t sec = freq ? (ticks / freq) : 0;
 
-        if (sec != last_sec) {
+        if (has_fb && sec != last_sec) {
             last_sec = sec;
             gui_tick(boot_unix_time, sec);
         }

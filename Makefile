@@ -68,6 +68,7 @@ run: esp
 	$(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
 		-drive file=fat:rw:esp,format=raw,if=virtio \
+		-device ramfb \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-display none \
 		-serial file:serial.log \
@@ -80,6 +81,7 @@ run-x11: esp
 	DISPLAY=:0 $(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
 		-drive file=fat:rw:esp,format=raw,if=virtio \
+		-device ramfb \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-display gtk \
 		-serial stdio
@@ -91,6 +93,7 @@ run-vnc: esp
 	$(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
 		-drive file=fat:rw:esp,format=raw,if=virtio \
+		-device ramfb \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-vnc 0.0.0.0:0 \
 		-serial stdio
