@@ -48,7 +48,8 @@ psci_version:
 .align 2
 .global psci_reset
 psci_reset:
-    mov x0, #0x84000009
+    movz x0, #0x0009
+    movk x0, #0x8400, lsl #16
     mov x1, xzr
     mov x2, xzr
     mov x3, xzr

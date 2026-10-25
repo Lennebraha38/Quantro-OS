@@ -1,13 +1,14 @@
 /*
- * Benim-OS Pro - Cekirdek genel arayuzu
+ * Quantro OS - Cekirdek genel arayuzu
+ * Windows 11 Mimari Uyumluluk Surumu
  */
-#ifndef BENIMOS_KERNEL_H
-#define BENIMOS_KERNEL_H
+#ifndef QUANTRO_KERNEL_H
+#define QUANTRO_KERNEL_H
 
 #include "types.h"
 
-#define KERNEL_NAME    "Benim-OS Pro"
-#define KERNEL_VERSION "0.3.0"
+#define KERNEL_NAME    "Quantro OS"
+#define KERNEL_VERSION "0.4.0-wincomp"
 #define KERNEL_ARCH    "AArch64"
 
 /* QEMU virt makinesindeki PL011 UART'in fiziksel adresi */
@@ -21,7 +22,12 @@ int    memcmp(const void *a, const void *b, size_t count);
 size_t strlen(const char *s);
 int    strcmp(const char *a, const char *b);
 int    strncmp(const char *a, const char *b, size_t n);
+int    strcasecmp(const char *a, const char *b);
 int    str_starts_with(const char *s, const char *prefix);
+char  *strcpy(char *dst, const char *src);
+char  *strncpy(char *dst, const char *src, size_t n);
+char  *strchr(const char *s, int c);
+int    atoi(const char *s);
 
 /* lib/format.c */
 int  kvsnprintf(char *buf, size_t size, const char *fmt, va_list ap);
@@ -38,4 +44,4 @@ uint64_t timer_frequency(void);
 uint64_t timer_ticks(void);
 void     timer_init(void);
 
-#endif /* BENIMOS_KERNEL_H */
+#endif /* QUANTRO_KERNEL_H */

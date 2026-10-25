@@ -1,8 +1,5 @@
 /*
- * Benim-OS Pro - Freestanding bellek ve metin yardimcilari
- *
- * GCC/Clang -ffreestanding modunda donguleri memset/memcpy cagrilarina
- * cevirebildigi icin bu fonksiyonlar cekirdegin icinde tanimlidir.
+ * Quantro OS - Freestanding bellek ve metin yardimcilari
  */
 #include "kernel.h"
 
@@ -98,6 +95,22 @@ int strncmp(const char *a, const char *b, size_t n)
     return (int)(uint8_t)*a - (int)(uint8_t)*b;
 }
 
+static char to_lower(char c)
+{
+    if (c >= 'A' && c <= 'Z')
+        return c + ('a' - 'A');
+    return c;
+}
+
+int strcasecmp(const char *a, const char *b)
+{
+    while (*a && to_lower(*a) == to_lower(*b)) {
+        a++;
+        b++;
+    }
+    return (int)(uint8_t)to_lower(*a) - (int)(uint8_t)to_lower(*b);
+}
+
 int str_starts_with(const char *s, const char *prefix)
 {
     while (*prefix) {
@@ -108,4 +121,57 @@ int str_starts_with(const char *s, const char *prefix)
     }
 
     return 1;
+}
+
+char *strcpy(char *dst, const char *src)
+{
+    char *ret = dst;
+    while ((*dst++ = *src++))
+        ;
+    return ret;
+}
+
+char *strncpy(char *dst, const char *src, size_t n)
+{
+    char *ret = dst;
+    while (n && (*dst++ = *src++))
+        n--;
+    while (n--)
+        *dst++ = '\0';
+    return ret;
+}
+
+char *strchr(const char *s, int c)
+{
+    while (*s) {
+        if (*s == (char)c)
+            return (char *)s;
+        s++;
+    }
+    if ((char)c == '\0')
+        return (char *)s;
+    return 0;
+}
+
+int atoi(const char *s)
+{
+    int res = 0;
+    int sign = 1;
+
+    while (*s == ' ' || *s == '\t')
+        s++;
+
+    if (*s == '-') {
+        sign = -1;
+        s++;
+    } else if (*s == '+') {
+        s++;
+    }
+
+    while (*s >= '0' && *s <= '9') {
+        res = res * 10 + (*s - '0');
+        s++;
+    }
+
+    return res * sign;
 }

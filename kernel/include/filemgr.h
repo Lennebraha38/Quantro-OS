@@ -1,5 +1,9 @@
-#ifndef FILEMGR_H
-#define FILEMGR_H
+#ifndef QUANTRO_FILEMGR_H
+#define QUANTRO_FILEMGR_H
+
+#include "types.h"
+
 void filemgr_init(void);
 void filemgr_run(void);
-#endif
+
+#endif /* QUANTRO_FILEMGR_H */

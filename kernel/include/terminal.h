@@ -1,5 +1,9 @@
-#ifndef TERMINAL_H
-#define TERMINAL_H
+#ifndef QUANTRO_TERMINAL_H
+#define QUANTRO_TERMINAL_H
+
+#include "types.h"
+
 void terminal_init(void);
 void terminal_run(void);
-#endif
+
+#endif /* QUANTRO_TERMINAL_H */

@@ -31,7 +31,7 @@ CFLAGS := -std=gnu17 -Wall -Wextra -O2 -pipe -ffreestanding -nostdinc \
           -Wno-unused-const-variable -Wno-type-limits \
           -ffunction-sections -fdata-sections \
           -Ikernel/include -Ikernel/arch/aarch64 \
-          -D__AARCH64__ -DKERNEL_VERSION=\"0.2.0\"
+          -D__AARCH64__
 
 # Linker bayraklari (yuksek yarimayfa, Limine uyumlu)
 LDFLAGS := -T kernel/arch/aarch64/linker.ld \

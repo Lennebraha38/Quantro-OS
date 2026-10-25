@@ -1,4 +1,11 @@
-#ifndef CLIPBOARD_H
-#define CLIPBOARD_H
+#ifndef QUANTRO_CLIPBOARD_H
+#define QUANTRO_CLIPBOARD_H
+
+#include "types.h"
+
 void clipboard_init(void);
-#endif
+int  clip_copy(const char *text);
+const char *clip_paste(void);
+void clip_status(void);
+
+#endif /* QUANTRO_CLIPBOARD_H */
