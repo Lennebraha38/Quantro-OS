@@ -74,6 +74,27 @@ run: esp
 		-qmp unix:qmp.sock,server,nowait \
 		-no-reboot &
 
+# Termux:X11 uzerinden arayuzu ac
+run-x11: esp
+	@mkdir -p /tmp && ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix /tmp/.X11-unix 2>/dev/null || true
+	DISPLAY=:0 $(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
+		-bios $(QEMU_BIOS) \
+		-drive file=esp,format=raw,if=virtio \
+		-device virtio-gpu-pci,xres=1280,yres=800 \
+		-display gtk \
+		-serial stdio
+
+# VNC Viewer (localhost:5900) uzerinden arayuzu ac
+run-vnc: esp
+	@echo "VNC Sunucusu baslatiliyor: 127.0.0.1:5900"
+	@echo "AVNC veya bVNC/RealVNC ile localhost:5900 adresine baglanabilirsiniz."
+	$(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
+		-bios $(QEMU_BIOS) \
+		-drive file=esp,format=raw,if=virtio \
+		-device virtio-gpu-pci,xres=1280,yres=800 \
+		-vnc 0.0.0.0:0 \
+		-serial stdio
+
 # EFI sistem bolumu (FAT) olusturup Limine dosyalari kopyalar
 esp: $(KERNEL_ELF) bootloader/BOOTAA64.EFI limine.conf
 	rm -rf esp && mkdir -p esp/EFI/BOOT esp/boot
