@@ -1,0 +1,48 @@
+UEFI firmware (version 2025.11-3ubuntu7.3 built at 15:40:26 on Sep 23 2026)
+[2J[001;001H[=3h[2J[001;001H[2J[001;001H[8;031;100t[2J[001;001HBdsDxe: loading Boot0002 "UEFI Misc Device" from PciRoot(0x0)/Pci(0x3,0x0)
+BdsDxe: starting Boot0002 "UEFI Misc Device" from PciRoot(0x0)/Pci(0x3,0x0)
+[2J[001;001H[001;001H[2J[001;001H[001;001H
+[Quantro OS] Windows 11 AArch64 Cekirdegi Onyukleniyor...
+[pmm] Fiziksel Sayfa Ayirici (PMM) baslatildi: Toplam=4037 MB, Bos=989 MB
+Bellek giris sayisi: 12
+[0] base=0x4000000 len=64 MiB type=reserved
+[1] base=0x9010000 len=0 MiB type=reserved
+[2] base=0x40000000 len=925 MiB type=usable
+[3] base=0x79d2e000 len=1 MiB type=reclaimable
+[4] base=0x79f25000 len=2 MiB type=kernel_and_modules
+[5] base=0x7a1f3000 len=0 MiB type=reclaimable
+[6] base=0x7a2a0000 len=63 MiB type=usable
+[7] base=0x7e284000 len=0 MiB type=reserved
+[8] base=0x7e288000 len=0 MiB type=usable
+[9] base=0x7e2a0000 len=14 MiB type=reclaimable
+[10] base=0x7f0f0000 len=1 MiB type=framebuffer
+[11] base=0x7f2c4c00 len=2002 MiB type=reclaimable
+Toplam Kullanilabilir RAM: 989 MiB
+[vmm] AArch64 4-Level Sanal Bellek Yoneticisi (VMM) hazir: L0 Table=0x40000000
+[heap] Dynamic Kernel Heap (kmalloc/kfree) baslatildi: Boyut=2048 KB
+[arch:aarch64] VBAR_EL1 Exception Vector Tablosu yuklendi: 0xffffffff80003000
+[fb] Framebuffer bulundu: 800x600 (32 bpp)
+[vfs] Quantro OS NTFS/VFS sanal dosya sistemi hazir
+[fs:fat] FAT32 On-Disk Sektor Ayristiricisi hazir (ESP Partisyonu)
+[fs:fat] FAT32 Bolumu Baglandi (Mount): OEM='%.8s', ClusterSize=18446744071562240011 B, RootCluster=512
+[user] Windows 11 SAM / Security Accounts Manager yuklendi (NT SID & ACL ready)
+[sec] Windows 11 Security Stack: TPM 2.0 + UEFI Secure Boot + HVCI + Quantro Defender AKTIF
+[net] Full TCP/IPv4 Network Engine (Ethernet/ARP/ICMP/UDP/TCP) baslatildi
+[sound] Windows HD Audio / VirtIO-Sound DSP baslatildi (%75 seviye)
+[sound:audio] ♪ ♫ Windows 11 Startup Melodisi caliniyor (F# -> A# -> D# -> G#) ♫ ♪
+[drv:mouse] VirtIO-Input aygiti bulundu: slot 30 (MMIO: 0xffff00000a003c00)
+[drv:mouse] VirtIO Tablet & Fare basariyla etkinlestirildi!
+[loader:elf] AArch64 ELF64 Dynamic Binary Loader hazir
+[proc] Windows NT Preemptive Scheduler + Donanimsal Context Switch hazir
+[wm:clipboard] Windows 11 Smart Clipboard (Panoya Kopyalama) hazir
+[toast] Guvenlik Merkezi: TPM 2.0 ve Secure Boot etkinlestirildi.
+[toast] Ag Baglantisi: Ethernet0 uzerinden yerel aga baglandi.
+[wm:notify] Windows 11 Action Center / Toast Bildirim Motoru hazir
+[app:calculator] Windows 11 Modern Calculator Motoru hazir
+[app:settings] Windows 11 Fluent Settings Hub hazir
+[app:filemgr] Windows 11 File Explorer (Dosya Gezgini) hazir
+[app:browser] Microsoft Edge / Quantro Web Tarayicisi hazir
+[app:terminal] Windows Terminal / PowerShell 7.4 hazir
+[wm] Windows 11 DWM (Desktop Window Manager) Compositor hazir
+[wm] Pencere olusturuldu [0]: Sistem Ozellikleri (640x420)
+[wm] Pencere olusturuldu [1]: Dosya Gezgini (640x420)
