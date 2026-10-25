@@ -51,10 +51,14 @@ static uint32_t mmio_r(uint64_t base,uint32_t off){ return *mmio(base,off); }
 static uint64_t blk_base = 0;
 static uint64_t blk_capacity = 0;
 
-/* virtqueue storage (page aligned) */
-static vring_desc_t descs[QSZ] __attribute__((aligned(4096)));
-static vring_avail_t avail __attribute__((aligned(4096)));
-static vring_used_t used __attribute__((aligned(4096)));
+/* virtqueue storage: tek contiguous buffer (legacy virtio-mmio gereksinimi) */
+typedef struct {
+    vring_desc_t descs[QSZ];
+    vring_avail_t avail;
+    uint8_t pad[4096];
+    vring_used_t used;
+} vring_t;
+static vring_t vring __attribute__((aligned(4096)));
 
 static blk_req_hdr_t req_hdr __attribute__((aligned(16)));
 static uint8_t status_byte __attribute__((aligned(16)));
@@ -67,12 +71,12 @@ static int setup_queue(uint64_t base){
     mmio_w(base, MMIO_QUEUE_NUM, n);
     mmio_w(base, MMIO_QUEUE_ALIGN, 4096);
     mmio_w(base, MMIO_GUEST_PAGE_SIZE, 4096);
-    mmio_w(base, MMIO_QUEUE_PFN, (uint32_t)(((uint64_t)descs) >> 12));
+    mmio_w(base, MMIO_QUEUE_PFN, (uint32_t)(((uint64_t)&vring) >> 12));
     /* Modern queue ready */
     mmio_w(base, MMIO_QUEUE_READY, 1);
     /* reset indices */
-    avail.idx = 0; avail.flags = 0;
-    used.idx = 0; used.flags = 0;
+    vring.avail.idx = 0; vring.avail.flags = 0;
+    vring.used.idx = 0; vring.used.flags = 0;
     return 0;
 }
 
@@ -113,34 +117,34 @@ static int do_request(uint32_t type, uint64_t lba, uint32_t count, void *buf){
     status_byte = 0xFF;
 
     /* descriptor 0: header (device reads) */
-    descs[0].addr = (uint64_t)&req_hdr;
-    descs[0].len = sizeof(req_hdr);
-    descs[0].flags = 1; /* NEXT */
-    descs[0].next = 1;
+    vring.descs[0].addr = (uint64_t)&req_hdr;
+    vring.descs[0].len = sizeof(req_hdr);
+    vring.descs[0].flags = 1; /* NEXT */
+    vring.descs[0].next = 1;
     /* descriptor 1: data */
-    descs[1].addr = (uint64_t)buf;
-    descs[1].len = count * 512;
-    descs[1].flags = (type==VIRTIO_BLK_T_IN ? 2 : 0) | 1; /* WRITE? device writes for IN -> VIRTQ_DESC_F_WRITE=2; NEXT */
-    descs[1].next = 2;
+    vring.descs[1].addr = (uint64_t)buf;
+    vring.descs[1].len = count * 512;
+    vring.descs[1].flags = (type==VIRTIO_BLK_T_IN ? 2 : 0) | 1; /* WRITE? device writes for IN -> VIRTQ_DESC_F_WRITE=2; NEXT */
+    vring.descs[1].next = 2;
     /* descriptor 2: status (device writes) */
-    descs[2].addr = (uint64_t)&status_byte;
-    descs[2].len = 1;
-    descs[2].flags = 2; /* WRITE */
-    descs[2].next = 0;
+    vring.descs[2].addr = (uint64_t)&status_byte;
+    vring.descs[2].len = 1;
+    vring.descs[2].flags = 2; /* WRITE */
+    vring.descs[2].next = 0;
 
     uint16_t head = 0;
-    avail.ring[avail.idx % QSZ] = head;
+    vring.avail.ring[vring.avail.idx % QSZ] = head;
     __sync_synchronize();
-    avail.idx++;
+    vring.avail.idx++;
 
     mmio_w(blk_base, MMIO_QUEUE_NOTIFY, 0);
 
     /* poll used */
-    uint16_t last = used.idx;
+    uint16_t last = vring.used.idx;
     for(volatile int t=0;t<1000000;t++){
-        if(used.idx != last) break;
+        if(vring.used.idx != last) break;
     }
-    if(used.idx == last) return -2; /* timeout */
+    if(vring.used.idx == last) return -2; /* timeout */
     if(status_byte != 0) return -3;
     return 0;
 }
