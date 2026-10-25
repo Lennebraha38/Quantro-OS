@@ -1,26 +1,16 @@
 /*
  * Quantro OS - Ultra Realistic Windows 11 Fluent Design & Mica GUI Motoru
- * - Fotogercekci Procedural "Bloom" Soyut Duvar Kagidi
- * - Buzlu Cam Acrylic / Mica Saydam Paneller
- * - Ortalanmis Windows 11 Taskbar & Tepsi
- * - Gelismis Baslat Menusu (Start Menu Popup) & 3x6 Sabitlenen Uygulamalar
- * - Windows 11 Sistem & Ayarlar Penceresi
- * - Windows 11 Aero Mouse Cursor
+ * Tam Etkilesimli Fare, Dinamik Baslat Menusu, Acilip Kapanan ve Tasinabilen Pencereler
  */
 #include "gui.h"
 #include "fb.h"
 #include "kernel.h"
 #include "sound.h"
-#include "pmm.h"
-#include "heap.h"
 
 #include <stdint.h>
 
 #define RGB(r, g, b)        (((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
-/* Windows 11 Orijinal Renk Paleti */
-#define CLR_BLOOM_BG_TOP    0x020813
-#define CLR_BLOOM_BG_BOT    0x0A1B33
 #define CLR_BLOOM_PETAL1    0x0078D4
 #define CLR_BLOOM_PETAL2    0x00A4EF
 #define CLR_BLOOM_PETAL3    0x2899F5
@@ -30,7 +20,6 @@
 
 #define CLR_MICA_BG         0x202020
 #define CLR_MICA_CARD       0x2B2B2B
-#define CLR_MICA_BORDER     0x3D3D3D
 #define CLR_TEXT_WHITE      0xFFFFFF
 #define CLR_TEXT_GRAY       0xCCCCCC
 #define CLR_TEXT_MUTED      0x888888
@@ -42,6 +31,16 @@ static uint32_t g_h = 800;
 
 static int64_t  g_boot_time = 0;
 static uint64_t g_uptime = 0;
+
+/* Etkilesimli Durumlar */
+static int g_cursor_x = 640;
+static int g_cursor_y = 400;
+static int g_start_open = 0;        /* 0: Kapali, 1: Acik */
+static int g_settings_open = 1;     /* 1: Acik, 0: Kapatildi */
+static int g_win_x = 250;
+static int g_win_y = 80;
+static int g_win_w = 780;
+static int g_win_h = 440;
 
 /* ---- Ikon Cizicileri ---------------------------------------------- */
 
@@ -73,11 +72,8 @@ static void draw_fluent_explorer(int cx, int cy, int size)
     int x = cx - w / 2;
     int y = cy - h / 2;
 
-    /* Arka klasor kulagi */
     fb_fill_round_rect(x, y - 4, w / 2, 8, 3, 0x005FB8);
-    /* Mavi klasor govdesi */
     fb_fill_round_rect(x, y, w, h, 4, 0x0078D4);
-    /* On sari kartvizit cebi */
     fb_fill_round_rect(x + 2, y + 4, w - 4, h - 6, 3, 0xFFA000);
     fb_fill_round_rect(x + 2, y + 8, w - 4, h - 10, 3, 0xFFC107);
 }
@@ -115,11 +111,10 @@ static void draw_fluent_calc(int cx, int cy, int size)
     fb_draw_text(cx - 8, cy - 1, "+ -", 0x60CDFF, 1);
 }
 
-/* ---- Fotogerçekçi Windows 11 "Bloom" Duvar Kağıdı Motoru ----------- */
+/* ---- Fotogerçekçi Bloom Duvar Kağıdı ------------------------------ */
 
 static void draw_photorealistic_bloom(void)
 {
-    /* 1. Ultra Pürüzsüz Gece Mavisi Arka Plan */
     for (uint32_t y = 0; y < g_h; y++) {
         uint32_t t = (y * 255) / (g_h ? g_h : 1);
         uint32_t r = 2 + (t * 8) / 255;
@@ -131,21 +126,18 @@ static void draw_photorealistic_bloom(void)
     int cx = (int)g_w / 2;
     int cy = (int)g_h / 2 - 20;
 
-    /* 2. Arka Plan Mor/İndigo Parıltısı */
     for (int r = 360; r > 40; r -= 10) {
         uint8_t a = (uint8_t)((360 - r) * 45 / 360);
         fb_blend_round_rect(cx - r + 40, cy - r * 3 / 5, r * 2, r * 6 / 5, r / 2,
                             CLR_BLOOM_PURPLE, a);
     }
 
-    /* 3. Ana Mavi Bloom Işık Küresi */
     for (int r = 300; r > 30; r -= 8) {
         uint8_t a = (uint8_t)((300 - r) * 70 / 300);
         fb_blend_round_rect(cx - r, cy - r * 2 / 3, r * 2, r * 4 / 3, r / 2,
                             CLR_BLOOM_PETAL1, a);
     }
 
-    /* 4. Sol Katmanlı İpeksi Yapraklar (Cyan / Sky Waves) */
     for (int i = 0; i < 50; i++) {
         int px = cx - 220 + i * 5;
         int py = cy + 60 - i * 6;
@@ -155,7 +147,6 @@ static void draw_photorealistic_bloom(void)
         fb_blend_round_rect(px + 10, py - 10, pw - 20, ph - 20, 45, CLR_BLOOM_PETAL4, 5);
     }
 
-    /* 5. Sağ Katmanlı İpeksi Yapraklar (Deep Blue / Electric Petals) */
     for (int i = 0; i < 55; i++) {
         int px = cx - 30 + i * 5;
         int py = cy + 80 - i * 5;
@@ -165,7 +156,6 @@ static void draw_photorealistic_bloom(void)
         fb_blend_round_rect(px - 10, py - 5, pw - 20, ph - 15, 50, CLR_BLOOM_PETAL1, 7);
     }
 
-    /* 6. Merkez Odak Işıltısı (Bright Cyan Core) */
     for (int r = 160; r > 10; r -= 6) {
         uint8_t a = (uint8_t)((160 - r) * 95 / 160);
         fb_blend_round_rect(cx - r * 3 / 4, cy - r / 2, r * 3 / 2, r, r / 2,
@@ -194,32 +184,25 @@ static void draw_desktop_icons(void)
 
     for (int i = 0; i < 5; i++) {
         int y = start_y + i * step_y;
-
-        /* Hover arkaligi */
         fb_blend_round_rect(start_x - 6, y - 6, 84, 80, 6, 0xFFFFFF, 12);
 
         int cx = start_x + 36;
         int cy = y + 26;
 
         if (icons[i].type == 0) {
-            /* Bilgisayar */
             fb_fill_round_rect(cx - 16, cy - 12, 32, 22, 3, 0x455A64);
             fb_fill_rect(cx - 13, cy - 9, 26, 16, 0x81D4FA);
             fb_fill_rect(cx - 4, cy + 10, 8, 4, 0x90A4AE);
             fb_fill_rect(cx - 8, cy + 14, 16, 2, 0x90A4AE);
         } else if (icons[i].type == 1) {
-            /* Geri Donusum */
             fb_fill_round_rect(cx - 12, cy - 14, 24, 28, 4, 0x546E7A);
             fb_fill_rect(cx - 8, cy - 10, 16, 22, 0xB0BEC5);
             fb_draw_text(cx - 5, cy - 4, "♻", 0xFFFFFF, 1);
         } else if (icons[i].type == 2) {
-            /* Edge */
             draw_fluent_edge(cx, cy, 32);
         } else if (icons[i].type == 3) {
-            /* Terminal */
             draw_fluent_terminal(cx, cy, 32);
         } else {
-            /* Dosyalarim */
             draw_fluent_explorer(cx, cy, 34);
         }
 
@@ -227,7 +210,7 @@ static void draw_desktop_icons(void)
     }
 }
 
-/* ---- Windows 11 Başlat Menüsü (Start Menu Popup) ------------------- */
+/* ---- Windows 11 Başlat Menüsü ------------------------------------- */
 
 static void draw_win11_start_menu(int cx, int bottom_y)
 {
@@ -236,14 +219,11 @@ static void draw_win11_start_menu(int cx, int bottom_y)
     int mx = cx - mw / 2;
     int my = bottom_y - mh - 12;
 
-    /* 1. Derin Pencere Gölgesi */
     fb_blend_round_rect(mx - 10, my - 8, mw + 20, mh + 20, 18, 0x000000, 160);
     fb_blend_round_rect(mx - 4,  my - 3, mw + 8,  mh + 8,  16, 0x000000, 190);
 
-    /* 2. Gerçek Acrylic / Mica Buzlu Cam Paneli */
     fb_draw_acrylic_panel(mx, my, mw, mh, 12, CLR_MICA_BG, 235);
 
-    /* 3. Arama Kutusu (Search Capsule) */
     int sx = mx + 36;
     int sy = my + 28;
     int sw = mw - 72;
@@ -252,17 +232,14 @@ static void draw_win11_start_menu(int cx, int bottom_y)
     fb_blend_round_rect(sx, sy, sw, 1, 1, 0xFFFFFF, 30);
     fb_draw_text(sx + 16, sy + 10, "🔍 Aramak icin buraya yazin...", CLR_TEXT_MUTED, 1);
 
-    /* 4. Sabitlenenler Başlığı */
     int py = sy + 52;
     fb_draw_text(mx + 38, py, "Sabitlenenler", CLR_TEXT_WHITE, 1);
     fb_draw_text(mx + mw - 160, py, "Tum uygulamalar >", CLR_ACCENT_CYAN, 1);
 
-    /* 5. 3x6 Sabitlenen Uygulamalar */
     int app_x0 = mx + 48;
     int app_y0 = py + 26;
     int step_col = (mw - 96) / 6;
 
-    /* Satir 1 */
     draw_fluent_edge(app_x0 + 0 * step_col, app_y0, 28);
     fb_draw_text_centered(app_x0 + 0 * step_col, app_y0 + 20, "Edge", CLR_TEXT_WHITE, 1);
 
@@ -281,7 +258,6 @@ static void draw_win11_start_menu(int cx, int bottom_y)
     draw_fluent_terminal(app_x0 + 5 * step_col, app_y0, 28);
     fb_draw_text_centered(app_x0 + 5 * step_col, app_y0 + 20, "Terminal", CLR_TEXT_WHITE, 1);
 
-    /* Satir 2 */
     int row2_y = app_y0 + 54;
     fb_fill_round_rect(app_x0 + 0 * step_col - 14, row2_y - 14, 28, 28, 5, 0x185ABD);
     fb_draw_text_centered(app_x0 + 0 * step_col, row2_y - 5, "W", 0xFFFFFF, 1);
@@ -307,7 +283,6 @@ static void draw_win11_start_menu(int cx, int bottom_y)
     fb_draw_text_centered(app_x0 + 5 * step_col, row2_y - 5, "📝", 0xFFFFFF, 1);
     fb_draw_text_centered(app_x0 + 5 * step_col, row2_y + 18, "Notlar", CLR_TEXT_WHITE, 1);
 
-    /* 6. Önerilenler */
     int rec_y = row2_y + 54;
     fb_draw_text(mx + 38, rec_y, "Onerilenler", CLR_TEXT_WHITE, 1);
 
@@ -322,34 +297,30 @@ static void draw_win11_start_menu(int cx, int bottom_y)
     fb_draw_text(c2_x + 30, c1_y + 4, "ntoskrnl.exe", CLR_TEXT_WHITE, 1);
     fb_draw_text(c2_x + 30, c1_y + 18, "C:\\Windows\\System32", CLR_TEXT_MUTED, 1);
 
-    /* 7. Alt Kullanıcı Çubuğu */
     int foot_y = my + mh - 58;
     fb_fill_round_rect(mx, foot_y, mw, 58, 12, 0x181818);
     fb_blend_round_rect(mx, foot_y, mw, 1, 1, 0xFFFFFF, 25);
 
-    /* Profil Resmi */
     fb_fill_round_rect(mx + 32, foot_y + 14, 30, 30, 15, CLR_ACCENT_BLUE);
     fb_draw_text(mx + 42, foot_y + 20, "Q", 0xFFFFFF, 1);
     fb_draw_text(mx + 72, foot_y + 18, "QuantroUser (Yonetici)", CLR_TEXT_WHITE, 1);
     fb_draw_text(mx + 72, foot_y + 32, "quantro@live.com", CLR_TEXT_MUTED, 1);
 
-    /* Güç Düğmesi */
     int pwr_x = mx + mw - 56;
     fb_fill_round_rect(pwr_x, foot_y + 14, 32, 32, 6, 0x242424);
     fb_draw_text(pwr_x + 10, foot_y + 22, "⏻", 0xFF5555, 1);
 }
 
-/* ---- Windows 11 Modern Görev Çubuğu ------------------------------- */
+/* ---- Modern Windows 11 Görev Çubuğu ------------------------------- */
 
 static void draw_win11_taskbar(int start_open)
 {
     int th = 50;
     int ty = (int)g_h - th;
 
-    /* Buzlu Cam Acrylic Taskbar */
     fb_draw_acrylic_panel(0, ty, (int)g_w, th, 0, 0x161616, 230);
 
-    /* Sol: Hava Durumu Widget'i */
+    /* Sol Hava Durumu */
     fb_fill_round_rect(16, ty + 8, 140, 34, 6, 0x222222);
     fb_blend_round_rect(16, ty + 8, 140, 1, 1, 0xFFFFFF, 20);
     fb_draw_text(26, ty + 16, "☀ 21 C Bulutlu", CLR_TEXT_WHITE, 1);
@@ -392,9 +363,11 @@ static void draw_win11_taskbar(int start_open)
 
     /* 7. Settings */
     draw_fluent_settings(cur_x + box_sz / 2, ty + th / 2, 26);
-    fb_fill_round_rect(cur_x + 12, ty + th - 4, 14, 3, 1, CLR_ACCENT_BLUE);
+    if (g_settings_open) {
+        fb_fill_round_rect(cur_x + 12, ty + th - 4, 14, 3, 1, CLR_ACCENT_BLUE);
+    }
 
-    /* Sağ: Sistem Tepsisi */
+    /* Sağ Sistem Tepsisi */
     int rx = (int)g_w - 24;
 
     char time_buf[16], date_buf[16];
@@ -415,14 +388,11 @@ static void draw_win11_taskbar(int start_open)
     fb_draw_text(rx + 12, ty + 16, "📶 🔊 🔋", CLR_TEXT_WHITE, 1);
 }
 
-/* ---- Windows 11 Sistem & Ayarlar Penceresi ------------------------- */
+/* ---- Windows 11 Ayarlar & Sistem Penceresi ------------------------- */
 
 static void draw_win11_settings_window(int wx, int wy, int ww, int wh)
 {
-    /* Gölge */
     fb_blend_round_rect(wx - 10, wy - 8, ww + 20, wh + 20, 18, 0x000000, 160);
-
-    /* Acrylic Buzlu Cam Gövde */
     fb_draw_acrylic_panel(wx, wy, ww, wh, 10, CLR_MICA_BG, 240);
 
     /* Başlık Çubuğu */
@@ -480,7 +450,6 @@ static void draw_win11_settings_window(int wx, int wy, int ww, int wh)
     cy += 70;
 
     int cw = ww - sb_w - 48;
-    /* Kart 1 */
     fb_fill_round_rect(cx, cy, cw, 78, 8, CLR_MICA_CARD);
     fb_blend_round_rect(cx, cy, cw, 1, 1, 0xFFFFFF, 25);
     fb_draw_text(cx + 16, cy + 10, "Cihaz Ozellikleri", CLR_ACCENT_CYAN, 1);
@@ -489,7 +458,6 @@ static void draw_win11_settings_window(int wx, int wy, int ww, int wh)
     fb_draw_text(cx + 16, cy + 62, "Sistem Turu:   64-bit Isletim Sistemi, ARM tabanli islemci", CLR_TEXT_GRAY, 1);
     cy += 88;
 
-    /* Kart 2 */
     fb_fill_round_rect(cx, cy, cw, 78, 8, CLR_MICA_CARD);
     fb_blend_round_rect(cx, cy, cw, 1, 1, 0xFFFFFF, 25);
     fb_draw_text(cx + 16, cy + 10, "Donanim & Guvenlik Standartlari", 0x66BB6A, 1);
@@ -498,7 +466,6 @@ static void draw_win11_settings_window(int wx, int wy, int ww, int wh)
     fb_draw_text(cx + 16, cy + 62, "[✔] Bellek Korumasi: VBS + HVCI (W^X Enforced)", CLR_TEXT_GRAY, 1);
     cy += 88;
 
-    /* Kart 3 */
     fb_fill_round_rect(cx, cy, cw, 68, 8, CLR_MICA_CARD);
     fb_blend_round_rect(cx, cy, cw, 1, 1, 0xFFFFFF, 25);
     fb_draw_text(cx + 16, cy + 10, "Ag & Depolama Durumu", 0xFFA726, 1);
@@ -506,7 +473,36 @@ static void draw_win11_settings_window(int wx, int wy, int ww, int wh)
     fb_draw_text(cx + 16, cy + 48, "Disk Suruculeri: C:\\ (NTFS/VFS Sanal Disk) + FAT32 ESP Bolumu", CLR_TEXT_WHITE, 1);
 }
 
-/* ---- Windows 11 Aero Mouse İmleci --------------------------------- */
+/* ---- İmleç Arka Plan Belleği ve Hızlı Çizim ----------------------- */
+static uint32_t s_cursor_bg[20][20];
+static int s_saved_cx = -1;
+static int s_saved_cy = -1;
+static int s_has_saved_bg = 0;
+
+static void restore_cursor_bg(void)
+{
+    if (!s_has_saved_bg || s_saved_cx < 0 || s_saved_cy < 0) return;
+    for (int y = 0; y < 20; y++) {
+        for (int x = 0; x < 20; x++) {
+            fb_put_pixel(s_saved_cx + x, s_saved_cy + y, s_cursor_bg[y][x]);
+        }
+    }
+    s_has_saved_bg = 0;
+}
+
+static void save_cursor_bg(int mx, int my)
+{
+    s_saved_cx = mx;
+    s_saved_cy = my;
+    for (int y = 0; y < 20; y++) {
+        for (int x = 0; x < 20; x++) {
+            s_cursor_bg[y][x] = fb_get_pixel(mx + x, my + y);
+        }
+    }
+    s_has_saved_bg = 1;
+}
+
+/* ---- Canlı Windows 11 Aero Fare İmleci ----------------------------- */
 
 static void draw_win11_aero_cursor(int mx, int my)
 {
@@ -529,7 +525,7 @@ static void draw_win11_aero_cursor(int mx, int my)
         "       XX       "
     };
 
-    /* Gölge */
+    /* İmleç Gölgesi */
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 16; x++) {
             if (cursor_data[y][x] != ' ') {
@@ -538,7 +534,7 @@ static void draw_win11_aero_cursor(int mx, int my)
         }
     }
 
-    /* Gövde */
+    /* İmleç Gövdesi */
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 16; x++) {
             char c = cursor_data[y][x];
@@ -551,43 +547,191 @@ static void draw_win11_aero_cursor(int mx, int my)
     }
 }
 
-/* ---- Genel GUI Arayüzü -------------------------------------------- */
+/* ---- Etkileşimli Olay İşleyicileri (Interactivity) ---------------- */
 
 void gui_init(void)
 {
     g_w = fb_width();
     g_h = fb_height();
     if (g_w == 0 || g_h == 0) return;
+
+    g_cursor_x = (int)g_w / 2;
+    g_cursor_y = (int)g_h / 2;
+    g_start_open = 0;
+    g_settings_open = 1;
+    g_win_x = (int)(g_w / 2) - (g_win_w / 2);
+    g_win_y = 70;
+    s_has_saved_bg = 0;
 }
 
 void gui_redraw_all(void)
 {
     if (!fb_ready()) return;
 
-    /* 1. Fotogerçekçi Windows 11 Bloom Duvar Kağıdı */
+    s_has_saved_bg = 0;
+
+    /* 1. Bloom Arka Plan */
     draw_photorealistic_bloom();
 
     /* 2. Masaüstü Simgeleri */
     draw_desktop_icons();
 
-    /* 3. Windows 11 Sistem & Ayarlar Penceresi */
-    int win_w = 780;
-    int win_h = 440;
-    int win_x = (int)(g_w / 2) - (win_w / 2);
-    int win_y = 60;
-    draw_win11_settings_window(win_x, win_y, win_w, win_h);
+    /* 3. Ayarlar Penceresi (Açıksa) */
+    if (g_settings_open) {
+        draw_win11_settings_window(g_win_x, g_win_y, g_win_w, g_win_h);
+    }
 
-    /* 4. Windows 11 Başlat Menüsü */
-    int center_x = (int)g_w / 2;
-    int taskbar_y = (int)g_h - 50;
-    draw_win11_start_menu(center_x, taskbar_y);
+    /* 4. Başlat Menüsü (Açıksa) */
+    if (g_start_open) {
+        draw_win11_start_menu((int)g_w / 2, (int)g_h - 50);
+    }
 
-    /* 5. Ortalanmış Modern Görev Çubuğu */
-    draw_win11_taskbar(1);
+    /* 5. Modern Görev Çubuğu */
+    draw_win11_taskbar(g_start_open);
 
-    /* 6. Windows 11 Aero Fare İmleci */
-    draw_win11_aero_cursor(center_x + 60, taskbar_y - 120);
+    /* 6. Dinamik Fare İmleci (Canlı Konum) */
+    save_cursor_bg(g_cursor_x, g_cursor_y);
+    draw_win11_aero_cursor(g_cursor_x, g_cursor_y);
 }
+
+void gui_move_cursor(int x, int y)
+{
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= (int)g_w) x = (int)g_w - 1;
+    if (y >= (int)g_h) y = (int)g_h - 1;
+
+    if (x == g_cursor_x && y == g_cursor_y) return;
+
+    restore_cursor_bg();
+    g_cursor_x = x;
+    g_cursor_y = y;
+    save_cursor_bg(g_cursor_x, g_cursor_y);
+    draw_win11_aero_cursor(g_cursor_x, g_cursor_y);
+}
+
+void gui_handle_mouse(int x, int y, int btn)
+{
+    gui_move_cursor(x, y);
+
+    if (btn != 0) {
+        int taskbar_y = (int)g_h - 50;
+        int count = 7;
+        int box_sz = 42;
+        int center_start = (int)(g_w / 2) - ((count * box_sz) / 2);
+
+        /* 1. Görev Çubuğundaki Butonlar */
+        if (y >= taskbar_y && y < (int)g_h) {
+            /* Başlat butonu */
+            if (x >= center_start && x < center_start + box_sz) {
+                g_start_open = !g_start_open;
+                gui_redraw_all();
+                return;
+            }
+            /* Ayarlar ikonu (7. ikon) */
+            int settings_btn_x = center_start + 6 * box_sz;
+            if (x >= settings_btn_x && x < settings_btn_x + box_sz) {
+                g_settings_open = !g_settings_open;
+                gui_redraw_all();
+                return;
+            }
+            /* Dosya Gezgini (3. ikon) */
+            int explorer_btn_x = center_start + 2 * box_sz;
+            if (x >= explorer_btn_x && x < explorer_btn_x + box_sz) {
+                g_settings_open = 1;
+                gui_redraw_all();
+                return;
+            }
+        }
+
+        /* 2. Başlat Menüsü İçindeki Butonlar */
+        if (g_start_open) {
+            int mw = 580;
+            int mh = 500;
+            int mx = (int)g_w / 2 - mw / 2;
+            int my = taskbar_y - mh - 12;
+
+            if (x >= mx && x < mx + mw && y >= my && y < my + mh) {
+                /* Güç Butonu */
+                int pwr_x = mx + mw - 56;
+                int pwr_y = my + mh - 58 + 14;
+                if (x >= pwr_x && x < pwr_x + 32 && y >= pwr_y && y < pwr_y + 32) {
+                    g_start_open = 0;
+                    gui_redraw_all();
+                    return;
+                }
+
+                /* Başlat menüsündeki bir uygulamaya tıklandı */
+                if (y >= my + 90 && y < my + 300) {
+                    g_start_open = 0;
+                    g_settings_open = 1;
+                    gui_redraw_all();
+                    return;
+                }
+                return;
+            } else {
+                /* Dışarı tıklandı, başlat menüsünü kapat */
+                g_start_open = 0;
+                gui_redraw_all();
+                return;
+            }
+        }
+
+        /* 3. Ayarlar Penceresi */
+        if (g_settings_open) {
+            int close_x = g_win_x + g_win_w - 46;
+            int close_y = g_win_y + 7;
+            /* Kapat Butonu (✕) */
+            if (x >= close_x && x < close_x + 38 && y >= close_y && y < close_y + 28) {
+                g_settings_open = 0;
+                gui_redraw_all();
+                return;
+            }
+
+            /* Pencere Başlık Çubuğu: Sürükleme / Taşıma */
+            if (x >= g_win_x && x < g_win_x + g_win_w - 130 &&
+                y >= g_win_y && y < g_win_y + 42) {
+                g_win_x = x - g_win_w / 2;
+                g_win_y = y - 20;
+                if (g_win_x < 10) g_win_x = 10;
+                if (g_win_y < 10) g_win_y = 10;
+                if (g_win_x + g_win_w > (int)g_w - 10) g_win_x = (int)g_w - g_win_w - 10;
+                if (g_win_y + g_win_h > taskbar_y - 10) g_win_y = taskbar_y - g_win_h - 10;
+                gui_redraw_all();
+                return;
+            }
+        }
+
+        /* 4. Masaüstü Simgelerine Tıklama */
+        int desk_start_x = 24;
+        int desk_start_y = 40;
+        int desk_step_y = 96;
+        for (int i = 0; i < 5; i++) {
+            int iy = desk_start_y + i * desk_step_y;
+            if (x >= desk_start_x && x < desk_start_x + 80 &&
+                y >= iy && y < iy + 80) {
+                g_settings_open = 1;
+                gui_redraw_all();
+                return;
+            }
+        }
+    }
+}
+
+void gui_toggle_start_menu(void)
+{
+    g_start_open = !g_start_open;
+    gui_redraw_all();
+}
+
+void gui_toggle_settings_window(void)
+{
+    g_settings_open = !g_settings_open;
+    gui_redraw_all();
+}
+
+int gui_get_cursor_x(void) { return g_cursor_x; }
+int gui_get_cursor_y(void) { return g_cursor_y; }
 
 void gui_tick(int64_t boot_time, uint64_t uptime_seconds)
 {

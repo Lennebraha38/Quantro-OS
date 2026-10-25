@@ -75,7 +75,7 @@ run: esp
 		-qmp unix:qmp.sock,server,nowait \
 		-no-reboot &
 
-# Termux:X11 uzerinden arayuzu ac
+# Termux:X11 uzerinden arayuzu ac (Mutlak dokunmatik tablet + Gorunur imlec destegi)
 run-x11: esp
 	@mkdir -p /tmp/.X11-unix && ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /tmp/.X11-unix/X0 2>/dev/null || true
 	DISPLAY=:0 $(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
@@ -83,7 +83,9 @@ run-x11: esp
 		-drive file=fat:rw:esp,format=raw,if=virtio \
 		-device ramfb \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
-		-display gtk \
+		-device virtio-tablet-device \
+		-device virtio-keyboard-device \
+		-display gtk,show-cursor=on,grab-on-hover=off \
 		-serial stdio
 
 # VNC Viewer (localhost:5900) uzerinden arayuzu ac
@@ -95,6 +97,8 @@ run-vnc: esp
 		-drive file=fat:rw:esp,format=raw,if=virtio \
 		-device ramfb \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
+		-device virtio-tablet-device \
+		-device virtio-keyboard-device \
 		-vnc 0.0.0.0:0 \
 		-serial stdio
 

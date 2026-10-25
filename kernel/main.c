@@ -21,6 +21,7 @@
 #include "filemgr.h"
 #include "browser.h"
 #include "terminal.h"
+#include "mouse.h"
 #include "pmm.h"
 #include "vmm.h"
 #include "heap.h"
@@ -530,6 +531,31 @@ static void shell_execute(char *line)
             browser_run();
     } else if (strcmp(cmd, "powershell") == 0 || strcmp(cmd, "cmd") == 0) {
         terminal_run();
+    } else if (strcmp(cmd, "mouse") == 0) {
+        if (arg1[0] != '\0' && arg2[0] != '\0') {
+            int mx = atoi(arg1);
+            int my = atoi(arg2);
+            gui_move_cursor(mx, my);
+            uart_printf("Fare imleci tasindi: (%d, %d)\r\n", mx, my);
+        } else {
+            uart_printf("Mevcut fare konumu: (%d, %d)\r\n", gui_get_cursor_x(), gui_get_cursor_y());
+        }
+    } else if (strcmp(cmd, "click") == 0) {
+        int mx = gui_get_cursor_x();
+        int my = gui_get_cursor_y();
+        if (arg1[0] != '\0' && arg2[0] != '\0') {
+            mx = atoi(arg1);
+            my = atoi(arg2);
+        }
+        gui_handle_mouse(mx, my, 1);
+        gui_handle_mouse(mx, my, 0);
+        uart_printf("Tiklandi: (%d, %d)\r\n", mx, my);
+    } else if (strcmp(cmd, "start") == 0 || strcmp(cmd, "baslat") == 0) {
+        gui_toggle_start_menu();
+        uart_puts("Baslat menusu durumu degistirildi.\r\n");
+    } else if (strcmp(cmd, "win") == 0 || strcmp(cmd, "window") == 0) {
+        gui_toggle_settings_window();
+        uart_puts("Ayarlar penceresi durumu degistirildi.\r\n");
     } else if (strcmp(cmd, "wm") == 0) {
         wm_list();
     } else if (strcmp(cmd, "toast") == 0) {
@@ -674,6 +700,9 @@ void kernel_main(void)
     /* 9. Ses ve Multimedya */
     sound_init();
 
+    /* 9.5 VirtIO Tablet & Fare Donanimi */
+    mouse_init(hhdm_offset);
+
     /* 10. ELF64 Binary Yukleyicisi */
     elfloader_init();
 
@@ -709,6 +738,8 @@ void kernel_main(void)
             last_sec = sec;
             gui_tick(boot_unix_time, sec);
         }
+
+        mouse_poll();
 
         proc_tick();
 
