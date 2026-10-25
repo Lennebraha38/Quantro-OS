@@ -67,7 +67,7 @@ $(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.S
 run: esp
 	$(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
-		-drive file=esp,format=raw,if=virtio \
+		-drive file=fat:rw:esp,format=raw,if=virtio \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-display none \
 		-serial file:serial.log \
@@ -76,10 +76,10 @@ run: esp
 
 # Termux:X11 uzerinden arayuzu ac
 run-x11: esp
-	@mkdir -p /tmp && ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix /tmp/.X11-unix 2>/dev/null || true
+	@mkdir -p /tmp/.X11-unix && ln -sf /data/data/com.termux/files/usr/tmp/.X11-unix/X0 /tmp/.X11-unix/X0 2>/dev/null || true
 	DISPLAY=:0 $(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
-		-drive file=esp,format=raw,if=virtio \
+		-drive file=fat:rw:esp,format=raw,if=virtio \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-display gtk \
 		-serial stdio
@@ -90,7 +90,7 @@ run-vnc: esp
 	@echo "AVNC veya bVNC/RealVNC ile localhost:5900 adresine baglanabilirsiniz."
 	$(QEMU) -M $(QEMU_MACHINE) -cpu $(QEMU_CPU) -m $(QEMU_MEM) \
 		-bios $(QEMU_BIOS) \
-		-drive file=esp,format=raw,if=virtio \
+		-drive file=fat:rw:esp,format=raw,if=virtio \
 		-device virtio-gpu-pci,xres=1280,yres=800 \
 		-vnc 0.0.0.0:0 \
 		-serial stdio
